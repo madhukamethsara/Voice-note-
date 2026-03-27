@@ -3,8 +3,8 @@ import '../Screens/Login.dart';
 import '../Screens/Register.dart';
 import '../Screens/Roles.dart';
 import '../Screens/SplashScreen.dart';
-import '../Screens/lecturehame.dart';
-import '../Screens/studenthome.dart';
+import '../Screens/Lecture/lecturehome.dart';
+import '../Screens/Student/studenthome.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -12,15 +12,15 @@ class AppRouter {
     routes: [
       GoRoute(
         path: '/',
-        builder: (_, __) => const SplashScreen(),
+        builder: (_, _) => const SplashScreen(),
       ),
       GoRoute(
         path: '/Login',
-        builder: (_, __) => const LoginScreen(),
+        builder: (_, _) => const LoginScreen(),
       ),
       GoRoute(
         path: '/roleselect',
-        builder: (_, __) => const RoleSelectScreen(),
+        builder: (_, _) => const RoleSelectScreen(),
       ),
       GoRoute(
         path: '/register',
@@ -30,12 +30,12 @@ class AppRouter {
         },
       ),
       GoRoute(
-        path: '/student-home',
-        builder: (_, __) => const StudentHomeScreen(),
+        path: '/Student/student-home',
+        builder: (_, _) => const StudentHomeScreen(),
       ),
       GoRoute(
         path: '/lecturer-home',
-        builder: (_, __) => const LecturerHomeScreen(),
+        builder: (_, _) => const LecturerHomeScreen(),
       ),
     ],
   );
