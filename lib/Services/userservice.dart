@@ -1,23 +1,78 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../Model/appuser.dart';
+import '../Model/AppUser.dart';
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  final String _collectionName = 'users';
+
   Future<void> saveUser(AppUser user) async {
-    await _firestore.collection('users').doc(user.uid).set({
-      ...user.toMap(),
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      await _firestore
+          .collection(_collectionName)
+          .doc(user.uid)
+          .set(user.toMap());
+    } catch (e) {
+      throw Exception('Failed to save user: $e');
+    }
   }
 
-  Future<AppUser?> getUser(String uid) async {
-    final doc = await _firestore.collection('users').doc(uid).get();
+  Future<AppUser?> getUserByUid(String uid) async {
+    try {
+      final doc = await _firestore.collection(_collectionName).doc(uid).get();
 
-    if (!doc.exists || doc.data() == null) {
-      return null;
+      if (!doc.exists || doc.data() == null) {
+        return null;
+      }
+
+      return AppUser.fromMap(doc.data()!);
+    } catch (e) {
+      throw Exception('Failed to get user: $e');
     }
+  }
 
-    return AppUser.fromMap(doc.data()!);
+  Stream<AppUser?> streamUserByUid(String uid) {
+    try {
+      return _firestore.collection(_collectionName).doc(uid).snapshots().map(
+        (doc) {
+          if (!doc.exists || doc.data() == null) {
+            return null;
+          }
+
+          return AppUser.fromMap(doc.data()!);
+        },
+      );
+    } catch (e) {
+      throw Exception('Failed to stream user: $e');
+    }
+  }
+
+  Future<void> updateUserProfile({
+    required String uid,
+    required String fullName,
+    required String university,
+    required String degree,
+    required String yearOfStudy,
+    required String department,
+  }) async {
+    try {
+      await _firestore.collection(_collectionName).doc(uid).update({
+        'fullName': fullName.trim(),
+        'university': university.trim(),
+        'degree': degree.trim(),
+        'yearOfStudy': yearOfStudy.trim(),
+        'department': department.trim(),
+      });
+    } catch (e) {
+      throw Exception('Failed to update profile: $e');
+    }
+  }
+
+  Future<void> deleteUser(String uid) async {
+    try {
+      await _firestore.collection(_collectionName).doc(uid).delete();
+    } catch (e) {
+      throw Exception('Failed to delete user: $e');
+    }
   }
 }

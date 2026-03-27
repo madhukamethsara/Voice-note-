@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../Theme/theme.dart';
 import '../widgets/commonwidget.dart';
 import '../Services/authservice.dart';
-import '../Services/userservice.dart';
+import '../Model/AppUser.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,7 +17,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passCtrl = TextEditingController();
 
   final AuthService _authService = AuthService();
-  final UserService _userService = UserService();
 
   bool _isLoading = false;
 
@@ -38,48 +36,36 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final credential = await _authService.login(
+      final AppUser appUser = await _authService.loginUser(
         email: _emailCtrl.text.trim(),
         password: _passCtrl.text.trim(),
       );
 
-      final appUser = await _userService.getUser(credential.user!.uid);
-
       if (!mounted) return;
-
-      if (appUser == null) {
-        _showSnack('User profile not found');
-        return;
-      }
 
       _showSnack('Logged in successfully');
 
-      if (appUser.role == 'student') {
-        context.go('/student-home');
-      } else if (appUser.role == 'lecturer') {
+      if (appUser.role.toLowerCase() == 'student') {
+        context.go('/Student/Dasboard');
+      } else if (appUser.role.toLowerCase() == 'lecturer') {
         context.go('/lecturer-home');
       } else {
         _showSnack('Unknown user role');
       }
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        _showSnack('No user found for this email');
-      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
-        _showSnack('Incorrect email or password');
-      } else if (e.code == 'invalid-email') {
-        _showSnack('Invalid email address');
-      } else {
-        _showSnack('Login failed: ${e.message}');
-      }
     } catch (e) {
-      _showSnack('Something went wrong: $e');
+      final errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _showSnack(errorMessage);
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
   }
 
   @override
@@ -108,8 +94,9 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 20),
             PrimaryButton(
               label: _isLoading ? 'Logging in...' : 'Log in',
-              onTap: _isLoading ? () {} : _doLogin,
+              onTap: _isLoading ? null : _doLogin,
             ),
+            const SizedBox(height: 16),
             const SizedBox(height: 16),
             Center(
               child: Text(

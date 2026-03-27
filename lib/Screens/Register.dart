@@ -1,19 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../Theme/theme.dart';
 import '../widgets/commonwidget.dart';
-import '../Model/appuser.dart';
-import '../Services/authservice.dart';
-import '../Services/userservice.dart';
+import '../Services/AuthService.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String role;
 
-  const RegisterScreen({
-    super.key,
-    required this.role,
-  });
+  const RegisterScreen({super.key, required this.role});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -28,7 +22,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _degreeCtrl = TextEditingController();
 
   final AuthService _authService = AuthService();
-  final UserService _userService = UserService();
 
   String _selectedYear = 'Year 3';
   final List<String> _years = ['Year 1', 'Year 2', 'Year 3', 'Year 4'];
@@ -75,15 +68,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final credential = await _authService.register(
-        email: _emailCtrl.text.trim(),
-        password: _passCtrl.text.trim(),
-      );
-
-      final user = AppUser(
-        uid: credential.user!.uid,
+      await _authService.registerUser(
         fullName: _nameCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
+        password: _passCtrl.text.trim(),
         role: widget.role,
         university: _uniCtrl.text.trim(),
         degree: _isStudent ? _degreeCtrl.text.trim() : null,
@@ -91,36 +79,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
         department: _isStudent ? null : _deptCtrl.text.trim(),
       );
 
-      await _userService.saveUser(user);
-
       if (!mounted) return;
 
       _showSnack('Account created successfully');
 
       if (_isStudent) {
-        context.go('/student-home');
+        context.go('/Student/Dasboard');
       } else {
         context.go('/lecturer-home');
       }
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-
-      if (e.code == 'email-already-in-use') {
-        _showSnack('This email is already registered');
-      } else if (e.code == 'weak-password') {
-        _showSnack('Password must be at least 6 characters');
-      } else if (e.code == 'invalid-email') {
-        _showSnack('Invalid email address');
-      } else if (e.code == 'configuration-not-found') {
-        _showSnack(
-          'Firebase is not configured correctly. Check package name, SHA keys, Email/Password sign-in, and google-services.json.',
-        );
-      } else {
-        _showSnack('Registration failed: ${e.message}');
-      }
     } catch (e) {
       if (!mounted) return;
-      _showSnack('Something went wrong: $e');
+      _showSnack(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -129,9 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override

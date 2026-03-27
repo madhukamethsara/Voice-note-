@@ -19,6 +19,19 @@ class AppUser {
     this.department,
   });
 
+  factory AppUser.fromMap(Map<String, dynamic> map) {
+    return AppUser(
+      uid: map['uid'] ?? '',
+      fullName: map['fullName'] ?? '',
+      email: map['email'] ?? '',
+      role: map['role'] ?? '',
+      university: map['university'] ?? '',
+      degree: map['degree'],
+      yearOfStudy: map['yearOfStudy'],
+      department: map['department'],
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,
@@ -29,25 +42,6 @@ class AppUser {
       'degree': degree,
       'yearOfStudy': yearOfStudy,
       'department': department,
-      'createdAt': DateTime.now(),
     };
-  }
-
-  factory AppUser.fromMap(Map<String, dynamic> map) {
-    return AppUser(
-      uid: map['uid'] ?? '',
-      fullName: map['fullName'] ?? '',
-      email: map['email'] ?? '',
-      role: map['role'] ?? '',
-      university: map['university'] ?? '',
-      degree: map['degree'] as String?,
-      yearOfStudy: map['yearOfStudy'] as String?,
-      department: map['department'] as String?,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'AppUser(uid: $uid, fullName: $fullName, email: $email, role: $role)';
   }
 }
