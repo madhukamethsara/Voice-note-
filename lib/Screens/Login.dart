@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../Theme/theme.dart';
 import '../widgets/commonwidget.dart';
 import '../Services/authservice.dart';
-import '../Model/AppUser.dart';
+import '../Models/AppUser.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

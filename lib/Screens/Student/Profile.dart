@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../Model/AppUser.dart';
+import '../../Models/AppUser.dart';
 import '../../Services/AuthService.dart';
 import '../../Services/UserService.dart';
 

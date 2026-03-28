@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:voicenote/Model/AppUser.dart';
+import 'package:voicenote/Models/AppUser.dart';
 import 'package:voicenote/Services/AuthService.dart';
 
 class Home extends StatefulWidget {
@@ -24,6 +24,19 @@ class _HomeState extends State<Home> {
 
   AppUser? _appUser;
   bool _isLoading = true;
+
+  String getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return "Good Morning 👋";
+    } else if (hour < 17) {
+      return "Good Afternoon ☀️";
+    } else if (hour < 21) {
+      return "Good Evening 🌆 ";
+    } else {
+      return "Good Night 🌙";
+    }
+  }
 
   @override
   void initState() {
@@ -66,9 +79,9 @@ class _HomeState extends State<Home> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 25),
-            const Text(
-              "Good morning 👋",
-              style: TextStyle(color: Home.subText, fontSize: 13),
+            Text(
+              getGreeting(),
+              style: const TextStyle(color: Home.subText, fontSize: 13),
             ),
             const SizedBox(height: 4),
             RichText(
@@ -372,8 +385,8 @@ class _ActionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center, 
-        crossAxisAlignment: CrossAxisAlignment.center, 
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(icon, color: iconColor, size: 28),
 
@@ -393,7 +406,7 @@ class _ActionCard extends StatelessWidget {
 
           Text(
             description,
-            textAlign: TextAlign.center, 
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white.withOpacity(0.6),
               fontSize: 11,
