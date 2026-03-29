@@ -4,11 +4,9 @@ import '../Models/TimetableEntry.dart';
 class TimetableService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Save fresh timetable:
-  /// 1. delete old timetable docs
-  /// 2. save new docs
-  Future<void> saveEntries(List<TimetableEntry> entries) async {
-    await deleteAllEntries();
+  Future<void> saveEntries(List<TimetableEntry> entries, String uid) async {
+    
+    await deleteUserEntries(uid);
 
     final batch = _firestore.batch();
 
@@ -20,9 +18,11 @@ class TimetableService {
     await batch.commit();
   }
 
-  /// Delete every existing timetable entry
-  Future<void> deleteAllEntries() async {
-    final snapshot = await _firestore.collection("timetable").get();
+  Future<void> deleteUserEntries(String uid) async {
+    final snapshot = await _firestore
+        .collection("timetable")
+        .where("createdBy", isEqualTo: uid)
+        .get();
 
     if (snapshot.docs.isEmpty) return;
 
@@ -35,18 +35,15 @@ class TimetableService {
     await batch.commit();
   }
 
-  /// Get all entries
-  Future<List<TimetableEntry>> getAllEntries() async {
-    final snapshot = await _firestore.collection("timetable").get();
+  Future<List<TimetableEntry>> getEntriesByDegree(String studentDegree, String uid) async {
+    final snapshot = await _firestore
+        .collection("timetable")
+        .where("createdBy", isEqualTo: uid)
+        .get();
 
-    return snapshot.docs
+    final allEntries = snapshot.docs
         .map((doc) => TimetableEntry.fromMap(doc.data()))
         .toList();
-  }
-
-  /// Filter entries by student degree
-  Future<List<TimetableEntry>> getEntriesByDegree(String studentDegree) async {
-    final allEntries = await getAllEntries();
 
     final student = studentDegree.toUpperCase().replaceAll(" ", "");
 
@@ -62,9 +59,8 @@ class TimetableService {
     return filtered;
   }
 
-  /// Get upcoming important entries
-  Future<List<TimetableEntry>> getUpcomingEntries(String studentDegree) async {
-    final filtered = await getEntriesByDegree(studentDegree);
+  Future<List<TimetableEntry>> getUpcomingEntries(String studentDegree, String uid) async {
+    final filtered = await getEntriesByDegree(studentDegree, uid);
 
     final upcoming = filtered.where((entry) {
       final text = entry.rawText.toUpperCase();

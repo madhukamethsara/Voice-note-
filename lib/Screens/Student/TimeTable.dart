@@ -22,46 +22,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
   final List<String> days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
   final Map<String, List<Map<String, dynamic>>> timetableData = {
-    "Mon": [
-      {
-        "time": "8:00",
-        "subject": "Data Structures",
-        "place": "Hall B · Dr. Silva · 2hrs",
-        "color": const Color(0xFF00E5B0),
-      },
-      {
-        "time": "11:00",
-        "subject": "Mathematics III",
-        "place": "Room 101 · Dr. Perera · 1hr",
-        "color": const Color(0xFFFFC145),
-      },
-      {
-        "time": "13:00",
-        "subject": "Software Engineering",
-        "place": "Room 204 · Prof. Kumar · 1.5hrs",
-        "color": const Color(0xFFFF6B6B),
-      },
-      {
-        "time": "15:00",
-        "subject": "Database Systems",
-        "place": "Lab 3 · Dr. Fernando · 2hrs",
-        "color": const Color(0xFFA78BFA),
-      },
-    ],
-    "Tue": [
-      {
-        "time": "9:00",
-        "subject": "OOP",
-        "place": "Room 201 · 2hrs",
-        "color": const Color(0xFF60A5FA),
-      },
-      {
-        "time": "13:00",
-        "subject": "Web Development",
-        "place": "Lab 2 · 2hrs",
-        "color": const Color(0xFF00E5B0),
-      },
-    ],
+    "Mon": [],
+    "Tue": [],
     "Wed": [],
     "Thu": [],
     "Fri": [],
@@ -127,6 +89,9 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
 
   Future<void> _uploadTimetable() async {
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
       final PlatformFile? file = await _fileService.pickExcelFile();
 
       if (!mounted) return;
@@ -159,9 +124,9 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
         _selectedFileName = file.name;
       });
 
-      final entries = _excelService.parseTimetable(bytes);
+      final entries = _excelService.parseTimetable(bytes, user.uid);
 
-      await _timetableService.saveEntries(entries);
+      await _timetableService.saveEntries(entries, user.uid);
       await _loadFilteredTimetable();
 
       for (final entry in entries) {
@@ -192,14 +157,15 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
 
   Future<void> _loadFilteredTimetable() async {
     try {
-      if (_studentDegree.isEmpty) return;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null || _studentDegree.isEmpty) return;
 
       setState(() {
         _isLoadingTimetable = true;
       });
 
-      final entries = await _timetableService.getEntriesByDegree(_studentDegree);
-      final upcoming = await _timetableService.getUpcomingEntries(_studentDegree);
+      final entries = await _timetableService.getEntriesByDegree(_studentDegree, user.uid);
+      final upcoming = await _timetableService.getUpcomingEntries(_studentDegree, user.uid);
 
       if (!mounted) return;
 
@@ -536,6 +502,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                 children: [
                   Text(
                     subject,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Color(0xFFF0F2FF),
                       fontSize: 13,
@@ -545,6 +513,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                   const SizedBox(height: 4),
                   Text(
                     place,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Color(0xFF8B92B8),
                       fontSize: 11,
