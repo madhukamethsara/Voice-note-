@@ -4,8 +4,23 @@ import '../Models/TimetableEntry.dart';
 class TimetableService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<void> saveEntries(List<TimetableEntry> entries, String uid) async {
+  // Change this date to the Monday of your Week 1
+  final DateTime semesterStart = DateTime(2026, 2, 2);
+
+  /// Calculates the current academic week number based on today's date
+  int getCurrentAcademicWeek() {
+    final now = DateTime.now();
+    if (now.isBefore(semesterStart)) return 1;
     
+    final difference = now.difference(semesterStart).inDays;
+    // Calculate week: difference / 7 + 1
+    int week = (difference / 7).floor() + 1;
+    
+    // Ensure we don't return negative or unrealistic weeks
+    return week > 0 ? week : 1;
+  }
+
+  Future<void> saveEntries(List<TimetableEntry> entries, String uid) async {
     await deleteUserEntries(uid);
 
     final batch = _firestore.batch();
@@ -59,20 +74,34 @@ class TimetableService {
     return filtered;
   }
 
+  /// New method to fetch ONLY the current week's entries
+  Future<List<TimetableEntry>> getCurrentWeekEntries(String studentDegree, String uid) async {
+    final int currentWeek = getCurrentAcademicWeek();
+    final allEntries = await getEntriesByDegree(studentDegree, uid);
+    
+    return allEntries.where((entry) => entry.week == currentWeek).toList();
+  }
+
+  /// UPDATED: Fetches special activities for the 2-week range
   Future<List<TimetableEntry>> getUpcomingEntries(String studentDegree, String uid) async {
-    final filtered = await getEntriesByDegree(studentDegree, uid);
+    final int currentWeek = getCurrentAcademicWeek();
+    final allEntries = await getEntriesByDegree(studentDegree, uid);
 
-    final upcoming = filtered.where((entry) {
+    final upcoming = allEntries.where((entry) {
       final text = entry.rawText.toUpperCase();
-
-      return text.contains("EXAM") ||
-          text.contains("COURSEWORK") ||
-          text.contains("SUBMISSION") ||
+      
+      // Keywords to look for in the Excel raw text
+      bool isSpecialActivity = text.contains("EXAM") ||
           text.contains("VIVA") ||
-          text.contains("STUDY LEAVE") ||
-          text.contains("HOLIDAY") ||
-          text.contains("POYADAY") ||
-          text.contains("INDEPENDENCE DAY");
+          text.contains("SUBMISSION") ||
+          text.contains("COURSEWORK") ||
+          text.contains("PRESENTATION") ||
+          text.contains("TEST");
+
+      // Filter for current week and next week (2 weeks total)
+      bool isWithinRange = entry.week >= currentWeek && entry.week <= (currentWeek + 1);
+
+      return isSpecialActivity && isWithinRange;
     }).toList();
 
     upcoming.sort(_compareEntries);

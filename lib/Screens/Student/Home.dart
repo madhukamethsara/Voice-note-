@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // 
+import 'package:intl/intl.dart'; 
 import 'package:voicenote/Models/AppUser.dart';
 import 'package:voicenote/Models/TimetableEntry.dart';
 import 'package:voicenote/Services/AuthService.dart';
@@ -49,10 +49,9 @@ class _HomeState extends State<Home> {
       final user = await _authService.getCurrentAppUser();
       
       if (user != null) {
-        // Fetch LIVE data 
-        final entries = await _timetableService.getEntriesByDegree(user.degree ?? "", user.uid);
+        // UPDATED: Now calls getCurrentWeekEntries to filter by the current academic week
+        final entries = await _timetableService.getCurrentWeekEntries(user.degree ?? "", user.uid);
         
-        // Use DateFormat 
         String todayName = DateFormat('EEEE').format(DateTime.now());
 
         if (!mounted) return;
@@ -221,7 +220,7 @@ class _HomeState extends State<Home> {
         border: Border.all(color: Home.cardBorder),
       ),
       child: const Text(
-        "No lectures scheduled for today. Upload a file to see your data.",
+        "No lectures scheduled for today. Upload a file or wait for the new week.",
         style: TextStyle(color: Home.subText, fontSize: 13),
       ),
     );
