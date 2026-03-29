@@ -49,7 +49,7 @@ class _HomeState extends State<Home> {
       final user = await _authService.getCurrentAppUser();
       
       if (user != null) {
-        // UPDATED: Now calls getCurrentWeekEntries to filter by the current academic week
+        
         final entries = await _timetableService.getCurrentWeekEntries(user.degree ?? "", user.uid);
         
         String todayName = DateFormat('EEEE').format(DateTime.now());

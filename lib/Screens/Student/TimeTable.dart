@@ -570,7 +570,7 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
       );
     }
 
-    // Logic to build the list of all upcoming activities
+    
     return Column(
       children: _upcomingEntries.map((entry) {
         return Padding(
