@@ -4,11 +4,24 @@ import '../Models/TimetableEntry.dart';
 class TimetableService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Save fresh timetable:
-  /// 1. delete old timetable docs
-  /// 2. save new docs
-  Future<void> saveEntries(List<TimetableEntry> entries) async {
-    await deleteAllEntries();
+  
+  final DateTime semesterStart = DateTime(2026, 2, 2);
+
+  
+  int getCurrentAcademicWeek() {
+    final now = DateTime.now();
+    if (now.isBefore(semesterStart)) return 1;
+    
+    final difference = now.difference(semesterStart).inDays;
+    
+    int week = (difference / 7).floor() + 1;
+    
+    
+    return week > 0 ? week : 1;
+  }
+
+  Future<void> saveEntries(List<TimetableEntry> entries, String uid) async {
+    await deleteUserEntries(uid);
 
     final batch = _firestore.batch();
 
@@ -20,9 +33,11 @@ class TimetableService {
     await batch.commit();
   }
 
-  /// Delete every existing timetable entry
-  Future<void> deleteAllEntries() async {
-    final snapshot = await _firestore.collection("timetable").get();
+  Future<void> deleteUserEntries(String uid) async {
+    final snapshot = await _firestore
+        .collection("timetable")
+        .where("createdBy", isEqualTo: uid)
+        .get();
 
     if (snapshot.docs.isEmpty) return;
 
@@ -35,18 +50,15 @@ class TimetableService {
     await batch.commit();
   }
 
-  /// Get all entries
-  Future<List<TimetableEntry>> getAllEntries() async {
-    final snapshot = await _firestore.collection("timetable").get();
+  Future<List<TimetableEntry>> getEntriesByDegree(String studentDegree, String uid) async {
+    final snapshot = await _firestore
+        .collection("timetable")
+        .where("createdBy", isEqualTo: uid)
+        .get();
 
-    return snapshot.docs
+    final allEntries = snapshot.docs
         .map((doc) => TimetableEntry.fromMap(doc.data()))
         .toList();
-  }
-
-  /// Filter entries by student degree
-  Future<List<TimetableEntry>> getEntriesByDegree(String studentDegree) async {
-    final allEntries = await getAllEntries();
 
     final student = studentDegree.toUpperCase().replaceAll(" ", "");
 
@@ -62,21 +74,34 @@ class TimetableService {
     return filtered;
   }
 
-  /// Get upcoming important entries
-  Future<List<TimetableEntry>> getUpcomingEntries(String studentDegree) async {
-    final filtered = await getEntriesByDegree(studentDegree);
+  
+  Future<List<TimetableEntry>> getCurrentWeekEntries(String studentDegree, String uid) async {
+    final int currentWeek = getCurrentAcademicWeek();
+    final allEntries = await getEntriesByDegree(studentDegree, uid);
+    
+    return allEntries.where((entry) => entry.week == currentWeek).toList();
+  }
 
-    final upcoming = filtered.where((entry) {
+  
+  Future<List<TimetableEntry>> getUpcomingEntries(String studentDegree, String uid) async {
+    final int currentWeek = getCurrentAcademicWeek();
+    final allEntries = await getEntriesByDegree(studentDegree, uid);
+
+    final upcoming = allEntries.where((entry) {
       final text = entry.rawText.toUpperCase();
-
-      return text.contains("EXAM") ||
-          text.contains("COURSEWORK") ||
-          text.contains("SUBMISSION") ||
+      
+      
+      bool isSpecialActivity = text.contains("EXAM") ||
           text.contains("VIVA") ||
-          text.contains("STUDY LEAVE") ||
-          text.contains("HOLIDAY") ||
-          text.contains("POYADAY") ||
-          text.contains("INDEPENDENCE DAY");
+          text.contains("SUBMISSION") ||
+          text.contains("COURSEWORK") ||
+          text.contains("PRESENTATION") ||
+          text.contains("TEST");
+
+      
+      bool isWithinRange = entry.week >= currentWeek && entry.week <= (currentWeek + 1);
+
+      return isSpecialActivity && isWithinRange;
     }).toList();
 
     upcoming.sort(_compareEntries);

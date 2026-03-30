@@ -36,11 +36,11 @@ class ExcelService {
     }
   }
 
-  List<TimetableEntry> parseTimetable(Uint8List bytes) {
+  List<TimetableEntry> parseTimetable(Uint8List bytes, String uid) {
     final excel = Excel.decodeBytes(bytes);
     final List<TimetableEntry> entries = [];
 
-    // find the real timetable sheet
+    
     Sheet? timetableSheet;
     for (final entry in excel.tables.entries) {
       final name = entry.key.toLowerCase();
@@ -57,7 +57,7 @@ class ExcelService {
 
     final sheet = timetableSheet;
 
-    // find the row with Monday-Friday headers
+    
     int dayHeaderRowIndex = -1;
 
     for (int i = 0; i < sheet.maxRows; i++) {
@@ -101,14 +101,14 @@ class ExcelService {
       final col1 = row.length > 1 ? row[1]?.value?.toString().trim() ?? "" : "";
       final col2 = row.length > 2 ? row[2]?.value?.toString().trim() ?? "" : "";
 
-      // detect week rows like "Week 1", "Week 2"
+      
       final weekMatch = RegExp(r'Week\s+(\d+)', caseSensitive: false).firstMatch(col1);
       if (weekMatch != null) {
         currentWeek = int.tryParse(weekMatch.group(1) ?? "0") ?? 0;
         continue;
       }
 
-      // only process rows that look like time rows
+      
       if (!_isTime(col1) || !_isTime(col2)) continue;
 
       final startTime = col1;
@@ -127,6 +127,7 @@ class ExcelService {
           startTime: startTime,
           endTime: endTime,
           week: currentWeek,
+          uid: uid, // 
         );
 
         entries.addAll(parsedEntries);
@@ -142,10 +143,11 @@ class ExcelService {
     required String startTime,
     required String endTime,
     required int week,
+    required String uid,
   }) {
     final List<TimetableEntry> results = [];
 
-    // special events without module code
+    
     final upper = cellText.toUpperCase();
 
     if (!upper.contains("PUSL")) {
@@ -158,19 +160,20 @@ class ExcelService {
           endTime: endTime,
           rawText: cellText,
           week: week,
+          createdBy: uid,
         ),
       );
       return results;
     }
 
-    // split multiline entries
+    
     final lines = cellText
         .split('\n')
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
         .toList();
 
-    // combine lines smartly into module chunks
+    
     final List<String> chunks = [];
     String buffer = "";
 
@@ -210,6 +213,7 @@ class ExcelService {
           endTime: endTime,
           rawText: chunk,
           week: week,
+          createdBy: uid,
         ),
       );
     }
