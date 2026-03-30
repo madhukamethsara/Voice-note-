@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'Home.dart';
 import 'Profile.dart';
 import 'TimeTable.dart';
+import 'RecordScreen.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -16,7 +17,7 @@ class _StudentMainScreenState extends State<Dashboard> {
   final List<Widget> _pages = const [
     Home(),
     TimetableScreen(),
-    StudentRecordScreen(),
+    RecordScreen(),
     StudentNotesScreen(),
     ProfileScreen(),
   ];
