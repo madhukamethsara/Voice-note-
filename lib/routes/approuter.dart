@@ -10,18 +10,9 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     initialLocation: '/',
     routes: [
-      GoRoute(
-        path: '/',
-        builder: (_, _) => const SplashScreen(),
-      ),
-      GoRoute(
-        path: '/Login',
-        builder: (_, _) => const LoginScreen(),
-      ),
-      GoRoute(
-        path: '/roleselect',
-        builder: (_, _) => const RoleSelectScreen(),
-      ),
+      GoRoute(path: '/', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/Login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/roleselect', builder: (_, _) => const RoleSelectScreen()),
       GoRoute(
         path: '/register',
         builder: (context, state) {
@@ -29,10 +20,7 @@ class AppRouter {
           return RegisterScreen(role: role);
         },
       ),
-      GoRoute(
-        path: '/Student/Dasboard',
-        builder: (_, _) => const Dashboard(),
-      ),
+      GoRoute(path: '/Student/Dasboard', builder: (_, _) => const Dashboard()),
       GoRoute(
         path: '/lecturer-home',
         builder: (_, _) => const LecturerHomeScreen(),

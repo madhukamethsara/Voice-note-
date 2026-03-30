@@ -26,10 +26,7 @@ class _StudentMainScreenState extends State<Dashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0D0F14),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         backgroundColor: const Color(0xFF141720),
@@ -74,10 +71,7 @@ class StudentTimetableScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Text(
-        "Timetable Screen",
-        style: TextStyle(color: Colors.white),
-      ),
+      child: Text("Timetable Screen", style: TextStyle(color: Colors.white)),
     );
   }
 }
@@ -88,10 +82,7 @@ class StudentRecordScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Text(
-        "Record Screen",
-        style: TextStyle(color: Colors.white),
-      ),
+      child: Text("Record Screen", style: TextStyle(color: Colors.white)),
     );
   }
 }
@@ -102,11 +93,7 @@ class StudentNotesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Text(
-        "Notes Screen",
-        style: TextStyle(color: Colors.white),
-      ),
+      child: Text("Notes Screen", style: TextStyle(color: Colors.white)),
     );
   }
 }
-
