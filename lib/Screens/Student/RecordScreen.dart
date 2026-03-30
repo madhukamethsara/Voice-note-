@@ -10,6 +10,8 @@ import 'package:record/record.dart';
 
 import 'package:voicenote/Models/Recording.dart';
 import 'package:voicenote/Services/RecordingStorage.dart';
+import 'package:voicenote/Services/Transcription.dart';
+import 'package:voicenote/Services/Summary.dart';
 
 class RecordScreen extends StatefulWidget {
   const RecordScreen({super.key});
@@ -36,6 +38,8 @@ class _RecordScreenState extends State<RecordScreen>
   final AudioRecorder _audioRecorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   final RecordingStorageService _storageService = RecordingStorageService();
+  final TranscriptionService _transcriptionService = TranscriptionService();
+  final SummaryService _summaryService = SummaryService();
 
   late final AnimationController _pulseController;
 
@@ -47,6 +51,8 @@ class _RecordScreenState extends State<RecordScreen>
   bool showAiSection = false;
   int seconds = 0;
   String? recordedFilePath;
+  String _latestTranscript = 'Transcript will come in the next step.';
+  String _summaryText = 'Summary will come after transcription.';
 
   List<RecordingItem> _recentRecordings = [];
   String? _playingPath;
@@ -153,6 +159,7 @@ class _RecordScreenState extends State<RecordScreen>
 
   void _stopWaveAnimation() {
     _waveTimer?.cancel();
+    if (!mounted) return;
     setState(() {
       _waveHeights = List.generate(12, (_) => 8);
     });
@@ -184,37 +191,46 @@ class _RecordScreenState extends State<RecordScreen>
         isRecording = true;
         showAiSection = false;
         recordedFilePath = null;
+        _latestTranscript = 'Transcript will come in the next step.';
       });
 
       _startTimer();
       _startWaveAnimation();
       _pulseController.repeat();
+      print('START RECORDING CALLED');
     } catch (e) {
       _showSnack('Failed to start recording: $e');
+      print('START RECORDING ERROR: $e');
     }
   }
 
   Future<void> _stopRecording() async {
     try {
+      print('STOP RECORDING CALLED');
+
       final path = await _audioRecorder.stop();
 
       _stopTimer();
       _stopWaveAnimation();
       _pulseController.stop();
 
+      RecordingItem? savedItem;
+
       if (path != null) {
         final file = File(path);
 
         if (await file.exists()) {
-          final item = RecordingItem(
+          savedItem = RecordingItem(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             module: selectedModule,
             path: path,
             durationSeconds: seconds,
             createdAt: DateTime.now(),
+            transcript: null,
+            isTranscribing: false,
           );
 
-          await _storageService.saveRecording(item);
+          await _storageService.saveRecording(savedItem);
         }
       }
 
@@ -229,8 +245,66 @@ class _RecordScreenState extends State<RecordScreen>
       await _loadRecordings();
 
       _showSnack(path == null ? 'Recording stopped' : 'Recording saved');
-    } catch (e) {
+
+      if (savedItem != null) {
+        print('ABOUT TO START TRANSCRIPTION');
+        _transcribeRecording(savedItem);
+      }
+    } catch (e, st) {
       _showSnack('Failed to stop recording: $e');
+      print('STOP RECORDING ERROR: $e');
+      print(st);
+    }
+  }
+
+  Future<void> _transcribeRecording(RecordingItem item) async {
+    try {
+      print('TRANSCRIBE METHOD CALLED for: ${item.path}');
+
+      final loadingItem = item.copyWith(isTranscribing: true);
+      await _storageService.updateRecording(loadingItem);
+      await _loadRecordings();
+
+      if (mounted) {
+        setState(() {
+          _latestTranscript = 'Transcribing...';
+        });
+      }
+
+      final transcript = await _transcriptionService.transcribeAudio(item.path);
+
+      final updatedItem = item.copyWith(
+        transcript: transcript,
+        isTranscribing: false,
+      );
+
+      await _storageService.updateRecording(updatedItem);
+      await _loadRecordings();
+
+      if (!mounted) return;
+
+      setState(() {
+        _latestTranscript = transcript.trim().isEmpty
+            ? 'No transcript returned.'
+            : transcript;
+      });
+
+      _showSnack('Transcript ready');
+    } catch (e, st) {
+      print('TRANSCRIBE ERROR: $e');
+      print(st);
+
+      final failedItem = item.copyWith(isTranscribing: false);
+      await _storageService.updateRecording(failedItem);
+      await _loadRecordings();
+
+      if (!mounted) return;
+
+      setState(() {
+        _latestTranscript = 'Transcription failed: $e';
+      });
+
+      _showSnack('Transcription failed');
     }
   }
 
@@ -268,6 +342,7 @@ class _RecordScreenState extends State<RecordScreen>
       });
     } catch (e) {
       _showSnack('Playback failed: $e');
+      print('PLAYBACK ERROR: $e');
     }
   }
 
@@ -285,6 +360,7 @@ class _RecordScreenState extends State<RecordScreen>
       _showSnack('Recording deleted');
     } catch (e) {
       _showSnack('Delete failed: $e');
+      print('DELETE ERROR: $e');
     }
   }
 
@@ -300,6 +376,39 @@ class _RecordScreenState extends State<RecordScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _generateSummary() async {
+    try {
+      if (_latestTranscript.trim().isEmpty ||
+          _latestTranscript == 'Transcribing...' ||
+          _latestTranscript.contains('failed')) {
+        _showSnack('No valid transcript available');
+        return;
+      }
+
+      setState(() {
+        _summaryText = 'Generating summary...';
+      });
+
+      final summary = await _summaryService.summarizeText(_latestTranscript);
+
+      if (!mounted) return;
+
+      setState(() {
+        _summaryText = summary.trim().isEmpty
+            ? 'No summary generated.'
+            : summary;
+      });
+
+      _showSnack('Summary ready');
+    } catch (e) {
+      setState(() {
+        _summaryText = 'Summary failed: $e';
+      });
+
+      _showSnack('Summary failed');
+    }
   }
 
   String _formatTime(int totalSeconds) {
@@ -584,14 +693,9 @@ class _RecordScreenState extends State<RecordScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle('AI Transcript'),
-        _buildTranscriptBox(
-          textValue: 'Transcript will come in the next step.',
-        ),
+        _buildTranscriptBox(textValue: _latestTranscript),
         _buildSectionTitle('AI Summary'),
-        _buildTranscriptBox(
-          textValue: 'Summary will come after transcription.',
-          textColor: text,
-        ),
+        _buildTranscriptBox(textValue: _summaryText, textColor: text),
         if (recordedFilePath != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -605,9 +709,7 @@ class _RecordScreenState extends State<RecordScreen>
             _buildSmallButton(
               textValue: '✨ Summarise',
               primary: true,
-              onTap: () {
-                _showSnack('Summary step comes next');
-              },
+              onTap: _generateSummary,
             ),
             const SizedBox(width: 8),
             _buildSmallButton(
@@ -677,6 +779,30 @@ class _RecordScreenState extends State<RecordScreen>
                     height: 1.5,
                   ),
                 ),
+                if (item.isTranscribing) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Transcribing...',
+                    style: GoogleFonts.dmSans(
+                      color: amber,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ] else if (item.transcript != null &&
+                    item.transcript!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    item.transcript!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.dmSans(
+                      color: text2,
+                      fontSize: 11,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
