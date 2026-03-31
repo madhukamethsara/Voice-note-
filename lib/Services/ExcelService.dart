@@ -40,7 +40,6 @@ class ExcelService {
     final excel = Excel.decodeBytes(bytes);
     final List<TimetableEntry> entries = [];
 
-    
     Sheet? timetableSheet;
     for (final entry in excel.tables.entries) {
       final name = entry.key.toLowerCase();
@@ -57,7 +56,6 @@ class ExcelService {
 
     final sheet = timetableSheet;
 
-    
     int dayHeaderRowIndex = -1;
 
     for (int i = 0; i < sheet.maxRows; i++) {
@@ -101,14 +99,15 @@ class ExcelService {
       final col1 = row.length > 1 ? row[1]?.value?.toString().trim() ?? "" : "";
       final col2 = row.length > 2 ? row[2]?.value?.toString().trim() ?? "" : "";
 
-      
-      final weekMatch = RegExp(r'Week\s+(\d+)', caseSensitive: false).firstMatch(col1);
+      final weekMatch = RegExp(
+        r'Week\s+(\d+)',
+        caseSensitive: false,
+      ).firstMatch(col1);
       if (weekMatch != null) {
         currentWeek = int.tryParse(weekMatch.group(1) ?? "0") ?? 0;
         continue;
       }
 
-      
       if (!_isTime(col1) || !_isTime(col2)) continue;
 
       final startTime = col1;
@@ -127,7 +126,7 @@ class ExcelService {
           startTime: startTime,
           endTime: endTime,
           week: currentWeek,
-          uid: uid, // 
+          uid: uid, //
         );
 
         entries.addAll(parsedEntries);
@@ -147,14 +146,26 @@ class ExcelService {
   }) {
     final List<TimetableEntry> results = [];
 
-    
     final upper = cellText.toUpperCase();
 
     if (!upper.contains("PUSL")) {
+      final degreeMatch = RegExp(r'\(([^)]*)\)').firstMatch(cellText);
+      final extractedDegree = degreeMatch?.group(1)?.trim();
+
+      final isGlobalSpecial =
+          upper.contains("HOLIDAY") ||
+          upper.contains("POYA") ||
+          upper.contains("STUDY LEAVE") ||
+          upper.contains("INDEPENDENCE DAY");
+
       results.add(
         TimetableEntry(
           moduleCode: "SPECIAL",
-          degree: "ALL",
+          degree: isGlobalSpecial
+              ? "ALL"
+              : (extractedDegree == null || extractedDegree.isEmpty
+                    ? "ALL"
+                    : extractedDegree),
           day: day,
           startTime: startTime,
           endTime: endTime,
@@ -166,14 +177,12 @@ class ExcelService {
       return results;
     }
 
-    
     final lines = cellText
         .split('\n')
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
         .toList();
 
-    
     final List<String> chunks = [];
     String buffer = "";
 
@@ -197,11 +206,14 @@ class ExcelService {
     }
 
     for (final chunk in chunks) {
-      final moduleMatch =
-          RegExp(r'PUSL\s?\d+', caseSensitive: false).firstMatch(chunk);
+      final moduleMatch = RegExp(
+        r'PUSL\s?\d+',
+        caseSensitive: false,
+      ).firstMatch(chunk);
       final degreeMatch = RegExp(r'\(([^)]*)\)').firstMatch(chunk);
 
-      final moduleCode = moduleMatch?.group(0)?.replaceAll(" ", "") ?? "UNKNOWN";
+      final moduleCode =
+          moduleMatch?.group(0)?.replaceAll(" ", "") ?? "UNKNOWN";
       final degree = degreeMatch?.group(1)?.trim() ?? "ALL";
 
       results.add(

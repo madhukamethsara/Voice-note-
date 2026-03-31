@@ -50,7 +50,7 @@ class _HomeState extends State<Home> {
       
       if (user != null) {
         
-        final entries = await _timetableService.getCurrentWeekEntries(user.degree ?? "", user.uid);
+        final entries = await _timetableService.getCurrentWeekEntries();
         
         String todayName = DateFormat('EEEE').format(DateTime.now());
 
@@ -138,7 +138,7 @@ class _HomeState extends State<Home> {
                       subtitle: "Week ${entry.week} · ${entry.rawText}",
                       lineColor: Home.teal,
                     ),
-                  )).toList(),
+                  )),
 
             const SizedBox(height: 20),
             const Text(
