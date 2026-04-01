@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class RecordingItem {
   final String id;
   final String module;
@@ -45,6 +47,7 @@ class RecordingItem {
     );
   }
 
+  // Local storage
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -66,6 +69,47 @@ class RecordingItem {
       path: map['path'] ?? '',
       durationSeconds: map['durationSeconds'] ?? 0,
       createdAt: DateTime.parse(map['createdAt']),
+      transcript: map['transcript'],
+      summary: map['summary'],
+      isTranscribing: map['isTranscribing'] ?? false,
+      isSummarizing: map['isSummarizing'] ?? false,
+    );
+  }
+
+  // Firestore
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'module': module,
+      'path': path,
+      'durationSeconds': durationSeconds,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'transcript': transcript,
+      'summary': summary,
+      'isTranscribing': isTranscribing,
+      'isSummarizing': isSummarizing,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+  }
+
+  factory RecordingItem.fromFirestore(Map<String, dynamic> map) {
+    final createdAtValue = map['createdAt'];
+
+    DateTime parsedCreatedAt;
+    if (createdAtValue is Timestamp) {
+      parsedCreatedAt = createdAtValue.toDate();
+    } else if (createdAtValue is String) {
+      parsedCreatedAt = DateTime.parse(createdAtValue);
+    } else {
+      parsedCreatedAt = DateTime.now();
+    }
+
+    return RecordingItem(
+      id: map['id'] ?? '',
+      module: map['module'] ?? '',
+      path: map['path'] ?? '',
+      durationSeconds: map['durationSeconds'] ?? 0,
+      createdAt: parsedCreatedAt,
       transcript: map['transcript'],
       summary: map['summary'],
       isTranscribing: map['isTranscribing'] ?? false,

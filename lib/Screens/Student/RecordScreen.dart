@@ -15,6 +15,7 @@ import 'package:voicenote/Services/Transcription.dart';
 import 'package:voicenote/Screens/Student/RecordingDetailScreen.dart';
 import 'package:voicenote/Models/NoteFileItem.dart';
 import 'package:voicenote/Services/NoteFileStorage.dart';
+import 'package:voicenote/Services/RecordingFirestore.dart';
 
 class RecordScreen extends StatefulWidget {
   const RecordScreen({super.key});
@@ -45,6 +46,8 @@ class _RecordScreenState extends State<RecordScreen>
   final SummaryService _summaryService = SummaryService();
   final NoteFileStorageService _noteFileStorageService =
       NoteFileStorageService();
+  final RecordingFirestoreService _firestoreService =
+      RecordingFirestoreService();
 
   late final AnimationController _pulseController;
 
@@ -276,6 +279,7 @@ class _RecordScreenState extends State<RecordScreen>
           );
 
           await _storageService.saveRecording(savedItem);
+          await _firestoreService.saveRecording(savedItem);
         }
       }
 
@@ -304,6 +308,7 @@ class _RecordScreenState extends State<RecordScreen>
     try {
       final loadingItem = item.copyWith(isTranscribing: true);
       await _storageService.updateRecording(loadingItem);
+      await _firestoreService.updateRecording(loadingItem);
       await _loadRecordings();
 
       if (mounted) {
@@ -321,6 +326,7 @@ class _RecordScreenState extends State<RecordScreen>
       );
 
       await _storageService.updateRecording(updatedItem);
+      await _firestoreService.updateRecording(updatedItem);
       await _loadRecordings();
 
       if (!mounted) return;
@@ -396,6 +402,8 @@ class _RecordScreenState extends State<RecordScreen>
       }
 
       await _storageService.deleteRecording(item.id);
+      await _firestoreService.deleteRecording(item.id);
+
       await _loadRecordings();
 
       if (!mounted) return;
@@ -439,6 +447,7 @@ class _RecordScreenState extends State<RecordScreen>
 
       final loadingItem = currentItem.copyWith(isSummarizing: true);
       await _storageService.updateRecording(loadingItem);
+      await _firestoreService.updateRecording(loadingItem);
       await _loadRecordings();
 
       final summary = await _summaryService.summarizeText(transcript);
@@ -449,6 +458,8 @@ class _RecordScreenState extends State<RecordScreen>
       );
 
       await _storageService.updateRecording(updatedItem);
+      await _firestoreService.updateRecording(updatedItem);
+
       await _loadRecordings();
 
       if (!mounted) return;
