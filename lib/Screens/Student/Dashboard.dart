@@ -3,6 +3,7 @@ import 'Home.dart';
 import 'Profile.dart';
 import 'TimeTable.dart';
 import 'RecordScreen.dart';
+import 'Notes.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -18,7 +19,7 @@ class _StudentMainScreenState extends State<Dashboard> {
     Home(),
     TimetableScreen(),
     RecordScreen(),
-    StudentNotesScreen(),
+    Notes(),
     ProfileScreen(),
   ];
 

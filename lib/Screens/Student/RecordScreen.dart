@@ -10,6 +10,12 @@ import 'package:record/record.dart';
 
 import 'package:voicenote/Models/Recording.dart';
 import 'package:voicenote/Services/RecordingStorage.dart';
+import 'package:voicenote/Services/Summary.dart';
+import 'package:voicenote/Services/Transcription.dart';
+import 'package:voicenote/Screens/Student/RecordingDetailScreen.dart';
+import 'package:voicenote/Models/NoteFileItem.dart';
+import 'package:voicenote/Services/NoteFileStorage.dart';
+import 'package:voicenote/Services/RecordingFirestore.dart';
 
 class RecordScreen extends StatefulWidget {
   const RecordScreen({super.key});
@@ -36,6 +42,12 @@ class _RecordScreenState extends State<RecordScreen>
   final AudioRecorder _audioRecorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   final RecordingStorageService _storageService = RecordingStorageService();
+  final TranscriptionService _transcriptionService = TranscriptionService();
+  final SummaryService _summaryService = SummaryService();
+  final NoteFileStorageService _noteFileStorageService =
+      NoteFileStorageService();
+  final RecordingFirestoreService _firestoreService =
+      RecordingFirestoreService();
 
   late final AnimationController _pulseController;
 
@@ -47,6 +59,9 @@ class _RecordScreenState extends State<RecordScreen>
   bool showAiSection = false;
   int seconds = 0;
   String? recordedFilePath;
+  String _latestTranscript = 'Transcript will come in the next step.';
+  String _summaryText = 'Summary will come after transcription.';
+  String? _latestRecordingId;
 
   List<RecordingItem> _recentRecordings = [];
   String? _playingPath;
@@ -93,6 +108,15 @@ class _RecordScreenState extends State<RecordScreen>
     setState(() {
       _recentRecordings = items;
     });
+  }
+
+  RecordingItem? _findRecordingById(String? id) {
+    if (id == null) return null;
+    try {
+      return _recentRecordings.firstWhere((item) => item.id == id);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<String> _createRecordingPath() async {
@@ -153,6 +177,7 @@ class _RecordScreenState extends State<RecordScreen>
 
   void _stopWaveAnimation() {
     _waveTimer?.cancel();
+    if (!mounted) return;
     setState(() {
       _waveHeights = List.generate(12, (_) => 8);
     });
@@ -184,6 +209,9 @@ class _RecordScreenState extends State<RecordScreen>
         isRecording = true;
         showAiSection = false;
         recordedFilePath = null;
+        _latestRecordingId = null;
+        _latestTranscript = 'Transcript will come in the next step.';
+        _summaryText = 'Summary will come after transcription.';
       });
 
       _startTimer();
@@ -191,6 +219,36 @@ class _RecordScreenState extends State<RecordScreen>
       _pulseController.repeat();
     } catch (e) {
       _showSnack('Failed to start recording: $e');
+    }
+  }
+
+  Future<void> _saveToNotes() async {
+    try {
+      final currentItem = _findRecordingById(_latestRecordingId);
+
+      if (currentItem == null) {
+        _showSnack('No recording available to save');
+        return;
+      }
+
+      final noteFile = NoteFileItem(
+        id: currentItem.id,
+        title: '${currentItem.module} Recording',
+        moduleName: currentItem.module,
+        moduleCode: '',
+        type: 'recording',
+        audioPath: currentItem.path,
+        transcript: currentItem.transcript,
+        summary: currentItem.summary,
+        createdAt: currentItem.createdAt,
+        updatedAt: DateTime.now(),
+      );
+
+      await _noteFileStorageService.saveFile(noteFile);
+
+      _showSnack('Saved to Notes ✅');
+    } catch (e) {
+      _showSnack('Save failed: $e');
     }
   }
 
@@ -202,19 +260,26 @@ class _RecordScreenState extends State<RecordScreen>
       _stopWaveAnimation();
       _pulseController.stop();
 
+      RecordingItem? savedItem;
+
       if (path != null) {
         final file = File(path);
 
         if (await file.exists()) {
-          final item = RecordingItem(
+          savedItem = RecordingItem(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             module: selectedModule,
             path: path,
             durationSeconds: seconds,
             createdAt: DateTime.now(),
+            transcript: null,
+            summary: null,
+            isTranscribing: false,
+            isSummarizing: false,
           );
 
-          await _storageService.saveRecording(item);
+          await _storageService.saveRecording(savedItem);
+          await _firestoreService.saveRecording(savedItem);
         }
       }
 
@@ -224,13 +289,67 @@ class _RecordScreenState extends State<RecordScreen>
         isRecording = false;
         showAiSection = true;
         recordedFilePath = path;
+        _latestRecordingId = savedItem?.id;
       });
 
       await _loadRecordings();
 
       _showSnack(path == null ? 'Recording stopped' : 'Recording saved');
+
+      if (savedItem != null) {
+        await _transcribeRecording(savedItem);
+      }
     } catch (e) {
       _showSnack('Failed to stop recording: $e');
+    }
+  }
+
+  Future<void> _transcribeRecording(RecordingItem item) async {
+    try {
+      final loadingItem = item.copyWith(isTranscribing: true);
+      await _storageService.updateRecording(loadingItem);
+      await _firestoreService.updateRecording(loadingItem);
+      await _loadRecordings();
+
+      if (mounted) {
+        setState(() {
+          _latestTranscript = 'Transcribing...';
+          _summaryText = 'Summary will come after transcription.';
+        });
+      }
+
+      final transcript = await _transcriptionService.transcribeAudio(item.path);
+
+      final updatedItem = item.copyWith(
+        transcript: transcript,
+        isTranscribing: false,
+      );
+
+      await _storageService.updateRecording(updatedItem);
+      await _firestoreService.updateRecording(updatedItem);
+      await _loadRecordings();
+
+      if (!mounted) return;
+
+      setState(() {
+        _latestTranscript = transcript.trim().isEmpty
+            ? 'No transcript returned.'
+            : transcript;
+      });
+
+      _showSnack('Transcript ready');
+    } catch (e) {
+      final failedItem = item.copyWith(isTranscribing: false);
+      await _storageService.updateRecording(failedItem);
+      await _loadRecordings();
+
+      if (!mounted) return;
+
+      setState(() {
+        _latestTranscript = 'Transcription failed: $e';
+      });
+
+      _showSnack('Transcription failed');
     }
   }
 
@@ -273,18 +392,121 @@ class _RecordScreenState extends State<RecordScreen>
 
   Future<void> _deleteRecording(RecordingItem item) async {
     try {
+      if (_playingPath == item.path) {
+        await _audioPlayer.stop();
+      }
+
       final file = File(item.path);
       if (await file.exists()) {
         await file.delete();
       }
 
       await _storageService.deleteRecording(item.id);
+      await _firestoreService.deleteRecording(item.id);
+
       await _loadRecordings();
 
       if (!mounted) return;
+
+      if (_latestRecordingId == item.id) {
+        setState(() {
+          _latestRecordingId = null;
+          recordedFilePath = null;
+          _latestTranscript = 'Transcript will come in the next step.';
+          _summaryText = 'Summary will come after transcription.';
+        });
+      }
+
       _showSnack('Recording deleted');
     } catch (e) {
       _showSnack('Delete failed: $e');
+    }
+  }
+
+  Future<void> _generateSummary() async {
+    try {
+      final currentItem = _findRecordingById(_latestRecordingId);
+
+      if (currentItem == null) {
+        _showSnack('No recording selected for summary');
+        return;
+      }
+
+      final transcript = currentItem.transcript?.trim() ?? '';
+
+      if (transcript.isEmpty ||
+          transcript == 'Transcribing...' ||
+          transcript.contains('failed')) {
+        _showSnack('No valid transcript available');
+        return;
+      }
+
+      setState(() {
+        _summaryText = 'Generating summary...';
+      });
+
+      final loadingItem = currentItem.copyWith(isSummarizing: true);
+      await _storageService.updateRecording(loadingItem);
+      await _firestoreService.updateRecording(loadingItem);
+      await _loadRecordings();
+
+      final summary = await _summaryService.summarizeText(transcript);
+
+      final updatedItem = loadingItem.copyWith(
+        summary: summary.trim().isEmpty ? 'No summary generated.' : summary,
+        isSummarizing: false,
+      );
+
+      await _storageService.updateRecording(updatedItem);
+      await _firestoreService.updateRecording(updatedItem);
+
+      await _loadRecordings();
+
+      if (!mounted) return;
+
+      setState(() {
+        _summaryText = updatedItem.summary ?? 'No summary generated.';
+      });
+
+      _showSnack('Summary ready');
+    } catch (e) {
+      final currentItem = _findRecordingById(_latestRecordingId);
+      if (currentItem != null) {
+        final failedItem = currentItem.copyWith(isSummarizing: false);
+        await _storageService.updateRecording(failedItem);
+        await _loadRecordings();
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _summaryText = 'Summary failed: $e';
+      });
+
+      _showSnack('Summary failed');
+    }
+  }
+
+  Future<void> _openRecordingDetails(RecordingItem item) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => RecordingDetailScreen(recording: item)),
+    );
+
+    await _loadRecordings();
+
+    if (!mounted) return;
+
+    final refreshedItem = _findRecordingById(item.id);
+    if (refreshedItem != null && _latestRecordingId == refreshedItem.id) {
+      setState(() {
+        _latestTranscript = refreshedItem.transcript?.trim().isNotEmpty == true
+            ? refreshedItem.transcript!
+            : 'Transcript will come in the next step.';
+        _summaryText = refreshedItem.summary?.trim().isNotEmpty == true
+            ? refreshedItem.summary!
+            : 'Summary will come after transcription.';
+      });
     }
   }
 
@@ -580,18 +802,16 @@ class _RecordScreenState extends State<RecordScreen>
   Widget _buildAiSection() {
     if (!showAiSection) return const SizedBox.shrink();
 
+    final currentItem = _findRecordingById(_latestRecordingId);
+    final isSummarizing = currentItem?.isSummarizing ?? false;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle('AI Transcript'),
-        _buildTranscriptBox(
-          textValue: 'Transcript will come in the next step.',
-        ),
+        _buildTranscriptBox(textValue: _latestTranscript),
         _buildSectionTitle('AI Summary'),
-        _buildTranscriptBox(
-          textValue: 'Summary will come after transcription.',
-          textColor: text,
-        ),
+        _buildTranscriptBox(textValue: _summaryText, textColor: text),
         if (recordedFilePath != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -603,18 +823,16 @@ class _RecordScreenState extends State<RecordScreen>
         Row(
           children: [
             _buildSmallButton(
-              textValue: '✨ Summarise',
+              textValue: isSummarizing ? 'Generating...' : '✨ Summarise',
               primary: true,
-              onTap: () {
-                _showSnack('Summary step comes next');
-              },
+              onTap: isSummarizing ? () {} : _generateSummary,
             ),
             const SizedBox(width: 8),
             _buildSmallButton(
               textValue: 'Save to Notes',
               primary: false,
               onTap: () {
-                _showSnack('Notes save step comes next');
+                _saveToNotes();
               },
             ),
           ],
@@ -626,65 +844,116 @@ class _RecordScreenState extends State<RecordScreen>
   Widget _buildRecentRecordingCard(RecordingItem item) {
     final isPlaying = _playingPath == item.path;
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: bg2,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: bg3),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => _togglePlayback(item),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: (item.module == 'Software Eng.' ? amber : teal)
-                    .withOpacity(0.10),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Text(
-                  isPlaying ? '⏸' : '▶',
-                  style: const TextStyle(fontSize: 18),
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => _openRecordingDetails(item),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: bg2,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: bg3),
+        ),
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: () => _togglePlayback(item),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: (item.module == 'Software Eng.' ? amber : teal)
+                      .withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    isPlaying ? '⏸' : '▶',
+                    style: const TextStyle(fontSize: 18),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.module,
-                  style: GoogleFonts.syne(
-                    color: text,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.module,
+                    style: GoogleFonts.syne(
+                      color: text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${_formatDurationLabel(item.durationSeconds)} · ${_formatDayLabel(item.createdAt)}',
-                  style: GoogleFonts.dmSans(
-                    color: text2,
-                    fontSize: 12,
-                    height: 1.5,
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_formatDurationLabel(item.durationSeconds)} · ${_formatDayLabel(item.createdAt)}',
+                    style: GoogleFonts.dmSans(
+                      color: text2,
+                      fontSize: 12,
+                      height: 1.5,
+                    ),
                   ),
-                ),
-              ],
+                  if (item.isTranscribing) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Transcribing...',
+                      style: GoogleFonts.dmSans(
+                        color: amber,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ] else if (item.isSummarizing) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Generating summary...',
+                      style: GoogleFonts.dmSans(
+                        color: teal,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ] else if (item.summary != null &&
+                      item.summary!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      item.summary!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.dmSans(
+                        color: text2,
+                        fontSize: 11,
+                        height: 1.4,
+                      ),
+                    ),
+                  ] else if (item.transcript != null &&
+                      item.transcript!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      item.transcript!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.dmSans(
+                        color: text2,
+                        fontSize: 11,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
-          IconButton(
-            onPressed: () => _deleteRecording(item),
-            icon: const Icon(Icons.delete_outline, color: text2, size: 18),
-          ),
-        ],
+            IconButton(
+              onPressed: () => _deleteRecording(item),
+              icon: const Icon(Icons.delete_outline, color: text2, size: 18),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:voicenote/Services/ModuleService.dart';
 
 import 'package:voicenote/Services/FileService.dart';
 import 'package:voicenote/Services/ExcelService.dart';
@@ -22,46 +23,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
   final List<String> days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
   final Map<String, List<Map<String, dynamic>>> timetableData = {
-    "Mon": [
-      {
-        "time": "8:00",
-        "subject": "Data Structures",
-        "place": "Hall B · Dr. Silva · 2hrs",
-        "color": const Color(0xFF00E5B0),
-      },
-      {
-        "time": "11:00",
-        "subject": "Mathematics III",
-        "place": "Room 101 · Dr. Perera · 1hr",
-        "color": const Color(0xFFFFC145),
-      },
-      {
-        "time": "13:00",
-        "subject": "Software Engineering",
-        "place": "Room 204 · Prof. Kumar · 1.5hrs",
-        "color": const Color(0xFFFF6B6B),
-      },
-      {
-        "time": "15:00",
-        "subject": "Database Systems",
-        "place": "Lab 3 · Dr. Fernando · 2hrs",
-        "color": const Color(0xFFA78BFA),
-      },
-    ],
-    "Tue": [
-      {
-        "time": "9:00",
-        "subject": "OOP",
-        "place": "Room 201 · 2hrs",
-        "color": const Color(0xFF60A5FA),
-      },
-      {
-        "time": "13:00",
-        "subject": "Web Development",
-        "place": "Lab 2 · 2hrs",
-        "color": const Color(0xFF00E5B0),
-      },
-    ],
+    "Mon": [],
+    "Tue": [],
     "Wed": [],
     "Thu": [],
     "Fri": [],
@@ -70,18 +33,21 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
   final FileService _fileService = FileService();
   final ExcelService _excelService = ExcelService();
   final TimetableService _timetableService = TimetableService();
+  final ModuleService _moduleService = ModuleService();
 
   List<TimetableEntry> _firebaseEntries = [];
   List<TimetableEntry> _upcomingEntries = [];
 
   String _studentDegree = "";
   bool _isLoadingTimetable = false;
+  int _currentWeek = 1;
 
   String? _selectedFileName;
 
   @override
   void initState() {
     super.initState();
+    _currentWeek = _timetableService.getCurrentAcademicWeek();
     _loadStudentDegree();
   }
 
@@ -127,6 +93,20 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
 
   Future<void> _uploadTimetable() async {
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      if (_studentDegree.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Student degree not found"),
+            backgroundColor: Color(0xFF141720),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
       final PlatformFile? file = await _fileService.pickExcelFile();
 
       if (!mounted) return;
@@ -159,19 +139,29 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
         _selectedFileName = file.name;
       });
 
-      final entries = _excelService.parseTimetable(bytes);
+      final entries = _excelService.parseTimetable(bytes, user.uid);
 
-      await _timetableService.saveEntries(entries);
-      await _loadFilteredTimetable();
+      final filteredEntries = _timetableService.filterEntriesForDegree(
+        entries,
+        _studentDegree,
+      );
 
-      for (final entry in entries) {
-        print("PARSED_TIMETABLE → ${entry.toString()}");
+      print("USER DEGREE -> $_studentDegree");
+      print("TOTAL PARSED -> ${entries.length}");
+      print("TOTAL FILTERED -> ${filteredEntries.length}");
+
+      for (final entry in filteredEntries) {
+        print("SAVING -> ${entry.degree} | ${entry.moduleCode}");
       }
+
+      await _timetableService.saveEntries(filteredEntries);
+      await _moduleService.saveModulesFromTimetable(filteredEntries);
+      await _loadFilteredTimetable();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            "Parsed, saved & loaded ${entries.length} timetable entries",
+            "Parsed, filtered, saved & loaded ${filteredEntries.length} timetable entries",
           ),
           backgroundColor: const Color(0xFF141720),
           behavior: SnackBarBehavior.floating,
@@ -192,14 +182,15 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
 
   Future<void> _loadFilteredTimetable() async {
     try {
-      if (_studentDegree.isEmpty) return;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null || _studentDegree.isEmpty) return;
 
       setState(() {
         _isLoadingTimetable = true;
       });
 
-      final entries = await _timetableService.getEntriesByDegree(_studentDegree);
-      final upcoming = await _timetableService.getUpcomingEntries(_studentDegree);
+      final entries = await _timetableService.getCurrentWeekEntries();
+      final upcoming = await _timetableService.getUpcomingEntries();
 
       if (!mounted) return;
 
@@ -209,8 +200,7 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
         _isLoadingTimetable = false;
       });
 
-      print("FILTERED_ENTRIES_COUNT → ${entries.length}");
-      print("UPCOMING_ENTRIES_COUNT → ${upcoming.length}");
+      print("FILTERED_ENTRIES_COUNT (Week $_currentWeek) → ${entries.length}");
     } catch (e) {
       if (!mounted) return;
 
@@ -278,11 +268,6 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
     return const Color(0xFF00E5B0);
   }
 
-  TimetableEntry? _getNextUpcomingEntry() {
-    if (_upcomingEntries.isEmpty) return null;
-    return _upcomingEntries.first;
-  }
-
   @override
   Widget build(BuildContext context) {
     final selectedDay = days[selectedDayIndex];
@@ -296,9 +281,9 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
         backgroundColor: const Color(0xFF141720),
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          "Timetable",
-          style: TextStyle(
+        title: Text(
+          "Timetable (Week $_currentWeek)",
+          style: const TextStyle(
             color: Color(0xFFF0F2FF),
             fontWeight: FontWeight.w700,
             fontSize: 18,
@@ -392,20 +377,20 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                       ),
                     )
                   : sessions.isEmpty
-                      ? _buildEmptyState()
-                      : Column(
-                          children: sessions.map((session) {
-                            return _buildTimeTableRow(
-                              time: session["time"],
-                              subject: session["subject"],
-                              place: session["place"],
-                              color: session["color"],
-                            );
-                          }).toList(),
-                        ),
+                  ? _buildEmptyState(selectedDay)
+                  : Column(
+                      children: sessions.map((session) {
+                        return _buildTimeTableRow(
+                          time: session["time"],
+                          subject: session["subject"],
+                          place: session["place"],
+                          color: session["color"],
+                        );
+                      }).toList(),
+                    ),
               const SizedBox(height: 22),
               const Text(
-                "Upcoming Exams",
+                "Upcoming Exams & Deadlines",
                 style: TextStyle(
                   color: Color(0xFFF0F2FF),
                   fontSize: 16,
@@ -536,6 +521,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                 children: [
                   Text(
                     subject,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Color(0xFFF0F2FF),
                       fontSize: 13,
@@ -545,6 +532,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                   const SizedBox(height: 4),
                   Text(
                     place,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Color(0xFF8B92B8),
                       fontSize: 11,
@@ -561,154 +550,95 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
   }
 
   Widget _buildExamCard() {
-    final upcoming = _getNextUpcomingEntry();
-
-    if (upcoming == null) {
+    if (_upcomingEntries.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFF141720),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0x44FF6B6B)),
+          border: Border.all(color: const Color(0xFF232840)),
         ),
-        child: const Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "No upcoming events",
-                        style: TextStyle(
-                          color: Color(0xFFF0F2FF),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        "Upload timetable or wait for filtered data",
-                        style: TextStyle(
-                          color: Color(0xFF8B92B8),
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  children: [
-                    Text(
-                      "--",
-                      style: TextStyle(
-                        color: Color(0xFFFF6B6B),
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Text(
-                      "days left",
-                      style: TextStyle(
-                        color: Color(0xFF555E7A),
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.all(Radius.circular(20)),
-              child: LinearProgressIndicator(
-                value: 0,
-                minHeight: 7,
-                backgroundColor: Color(0xFF232840),
-                valueColor: AlwaysStoppedAnimation(Color(0xFFFF6B6B)),
-              ),
-            ),
-          ],
+        child: const Text(
+          "No upcoming exams 🎉",
+          style: TextStyle(color: Color(0xFF8B92B8), fontSize: 12),
         ),
       );
     }
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141720),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x44FF6B6B)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      upcoming.moduleCode == "SPECIAL"
-                          ? upcoming.rawText
-                          : upcoming.moduleCode,
-                      style: const TextStyle(
-                        color: Color(0xFFF0F2FF),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "${upcoming.day} · ${upcoming.startTime.length >= 5 ? upcoming.startTime.substring(0, 5) : upcoming.startTime}",
-                      style: const TextStyle(
-                        color: Color(0xFF8B92B8),
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
+    return Column(
+      children: _upcomingEntries.map((entry) {
+        final weeksLeft = entry.week - _currentWeek;
+
+        double progress = 1 - (weeksLeft / 6);
+        progress = progress.clamp(0.0, 1.0);
+
+        Color progressColor;
+        if (weeksLeft > 4) {
+          progressColor = const Color(0xFF00E5B0);
+        } else if (weeksLeft > 2) {
+          progressColor = const Color(0xFFFFC145);
+        } else {
+          progressColor = const Color(0xFFFF6B6B);
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF141720),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: progressColor.withOpacity(0.4)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.rawText.trim(),
+                  style: const TextStyle(
+                    color: Color(0xFFF0F2FF),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              Column(
-                children: [
-                  Text(
-                    "${upcoming.week}",
-                    style: const TextStyle(
-                      color: Color(0xFFFF6B6B),
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                    ),
+                const SizedBox(height: 6),
+                Text(
+                  "${entry.day} · ${entry.startTime}",
+                  style: const TextStyle(
+                    color: Color(0xFF8B92B8),
+                    fontSize: 11,
                   ),
-                  const Text(
-                    "week",
-                    style: TextStyle(
-                      color: Color(0xFF555E7A),
-                      fontSize: 10,
-                    ),
+                ),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: const Color(0xFF232840),
+                    valueColor: AlwaysStoppedAnimation(progressColor),
                   ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: const LinearProgressIndicator(
-              value: 0.65,
-              minHeight: 7,
-              backgroundColor: Color(0xFF232840),
-              valueColor: AlwaysStoppedAnimation(Color(0xFFFF6B6B)),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "$weeksLeft week${weeksLeft == 1 ? "" : "s"} left",
+                  style: TextStyle(
+                    color: progressColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      }).toList(),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(String currentDay) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -717,21 +647,25 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFF232840)),
       ),
-      child: const Column(
+      child: Column(
         children: [
-          Icon(Icons.event_busy_rounded, color: Color(0xFF8B92B8), size: 30),
-          SizedBox(height: 10),
+          const Icon(
+            Icons.event_busy_rounded,
+            color: Color(0xFF8B92B8),
+            size: 30,
+          ),
+          const SizedBox(height: 10),
           Text(
-            "No lectures for this day",
-            style: TextStyle(
+            "No lectures for Week $_currentWeek $currentDay",
+            style: const TextStyle(
               color: Color(0xFFF0F2FF),
               fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
           ),
-          SizedBox(height: 4),
-          Text(
-            "Upload an Excel timetable and show the saved data here.",
+          const SizedBox(height: 4),
+          const Text(
+            "Wait for data or check if you uploaded the correct timetable.",
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF8B92B8),

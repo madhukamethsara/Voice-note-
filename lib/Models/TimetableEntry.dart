@@ -6,6 +6,7 @@ class TimetableEntry {
   final String endTime;
   final String rawText;
   final int week;
+  final String createdBy; 
 
   TimetableEntry({
     required this.moduleCode,
@@ -15,6 +16,7 @@ class TimetableEntry {
     required this.endTime,
     required this.rawText,
     required this.week,
+    required this.createdBy, 
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +28,7 @@ class TimetableEntry {
       'endTime': endTime,
       'rawText': rawText,
       'week': week,
+      'createdBy': createdBy, 
     };
   }
 
@@ -38,6 +41,7 @@ class TimetableEntry {
       endTime: map['endTime'] ?? '',
       rawText: map['rawText'] ?? '',
       week: map['week'] ?? 0,
+      createdBy: map['createdBy'] ?? '', 
     );
   }
 
