@@ -86,7 +86,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (_isStudent) {
         context.go('/Student/Dasboard');
       } else {
-        context.go('/lecturer-home');
+        
+        context.go('/Lecturer/Dashboard');
       }
     } catch (e) {
       if (!mounted) return;

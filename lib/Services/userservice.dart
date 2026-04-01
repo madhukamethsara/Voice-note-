@@ -51,18 +51,23 @@ class UserService {
     required String uid,
     required String fullName,
     required String university,
-    required String degree,
-    required String yearOfStudy,
-    required String department,
+    String? degree,       
+    String? yearOfStudy,  
+    String? department,   
   }) async {
     try {
-      await _firestore.collection(_collectionName).doc(uid).update({
+      
+      Map<String, dynamic> updateData = {
         'fullName': fullName.trim(),
         'university': university.trim(),
-        'degree': degree.trim(),
-        'yearOfStudy': yearOfStudy.trim(),
-        'department': department.trim(),
-      });
+      };
+
+      
+      if (degree != null) updateData['degree'] = degree.trim();
+      if (yearOfStudy != null) updateData['yearOfStudy'] = yearOfStudy.trim();
+      if (department != null) updateData['department'] = department.trim();
+
+      await _firestore.collection(_collectionName).doc(uid).update(updateData);
     } catch (e) {
       throw Exception('Failed to update profile: $e');
     }

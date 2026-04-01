@@ -48,7 +48,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (appUser.role.toLowerCase() == 'student') {
         context.go('/Student/Dasboard');
       } else if (appUser.role.toLowerCase() == 'lecturer') {
-        context.go('/lecturer-home');
+        
+        context.go('/Lecturer/Dashboard');
       } else {
         _showSnack('Unknown user role');
       }
@@ -64,7 +65,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
+      SnackBar(
+        content: Text(msg),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.bg2,
+      ),
     );
   }
 
@@ -96,7 +101,6 @@ class _LoginScreenState extends State<LoginScreen> {
               label: _isLoading ? 'Logging in...' : 'Log in',
               onTap: _isLoading ? null : _doLogin,
             ),
-            const SizedBox(height: 16),
             const SizedBox(height: 16),
             Center(
               child: Text(

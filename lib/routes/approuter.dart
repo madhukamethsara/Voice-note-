@@ -4,7 +4,7 @@ import '../Screens/Login.dart';
 import '../Screens/Register.dart';
 import '../Screens/Roles.dart';
 import '../Screens/SplashScreen.dart';
-import '../Screens/Lecture/lecturehome.dart';
+import '../Screens/Lecturer/LecturerDashboard.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -21,9 +21,11 @@ class AppRouter {
         },
       ),
       GoRoute(path: '/Student/Dasboard', builder: (_, _) => const Dashboard()),
+      
+      
       GoRoute(
-        path: '/lecturer-home',
-        builder: (_, _) => const LecturerHomeScreen(),
+        path: '/Lecturer/Dashboard', 
+        builder: (_, _) => const LecturerDashboard(),
       ),
     ],
   );
