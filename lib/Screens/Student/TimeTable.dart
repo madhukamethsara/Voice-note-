@@ -156,6 +156,13 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
 
       await _timetableService.saveEntries(filteredEntries);
       await _moduleService.saveModulesFromTimetable(filteredEntries);
+
+      final moduleDetails = _excelService.parseModuleDetails(
+        bytes,
+        _studentDegree,
+      );
+      await _moduleService.updateModuleDetails(moduleDetails);
+
       await _loadFilteredTimetable();
 
       ScaffoldMessenger.of(context).showSnackBar(

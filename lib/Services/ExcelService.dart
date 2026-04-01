@@ -126,7 +126,7 @@ class ExcelService {
           startTime: startTime,
           endTime: endTime,
           week: currentWeek,
-          uid: uid, //
+          uid: uid,
         );
 
         entries.addAll(parsedEntries);
@@ -134,6 +134,106 @@ class ExcelService {
     }
 
     return entries;
+  }
+
+  Map<String, Map<String, dynamic>> parseModuleDetails(
+    Uint8List bytes,
+    String studentDegree,
+  ) {
+    final excel = Excel.decodeBytes(bytes);
+    final Map<String, Map<String, dynamic>> moduleDetails = {};
+
+    Sheet? modulesSheet;
+    for (final entry in excel.tables.entries) {
+      final name = entry.key.toLowerCase().trim();
+      if (name == "modules") {
+        modulesSheet = entry.value;
+        break;
+      }
+    }
+
+    if (modulesSheet == null) {
+      print("Modules sheet not found.");
+      return moduleDetails;
+    }
+
+    final sheet = modulesSheet;
+
+    int codeCol = -1;
+    int nameCol = -1;
+    int lecturerCol = -1;
+    int sem1Col = -1;
+    int sem2Col = -1;
+    bool headerFound = false;
+
+    for (int i = 0; i < sheet.maxRows; i++) {
+      final row = sheet.row(i);
+
+      final values = row
+          .map((c) => (c?.value?.toString() ?? "").trim())
+          .toList();
+
+    
+      //final rowText = values.join(" ").toUpperCase();
+
+      // Find header row once
+      if (!headerFound &&
+          values.contains("Module Code") &&
+          values.contains("Module Name")) {
+        for (int j = 0; j < values.length; j++) {
+          final val = values[j];
+          if (val == "Module Code") codeCol = j;
+          if (val == "Module Name") nameCol = j;
+          if (val == "Lecturer Name") lecturerCol = j;
+          if (val == "Semester 1") sem1Col = j;
+          if (val == "Semester 2") sem2Col = j;
+        }
+        headerFound = true;
+        continue;
+      }
+
+      if (!headerFound) continue;
+      if (codeCol == -1 || nameCol == -1) continue;
+      if (codeCol >= row.length) continue;
+
+      final moduleCode = row[codeCol]?.value?.toString().trim() ?? "";
+      if (!moduleCode.toUpperCase().startsWith("PUSL")) continue;
+
+      final moduleName = nameCol < row.length
+          ? row[nameCol]?.value?.toString().trim() ?? ""
+          : "";
+
+      final lecturerName = lecturerCol != -1 && lecturerCol < row.length
+          ? row[lecturerCol]?.value?.toString().trim() ?? ""
+          : "";
+
+      String semester = "";
+      final sem1 = sem1Col != -1 && sem1Col < row.length
+          ? row[sem1Col]?.value?.toString().trim() ?? ""
+          : "";
+      final sem2 = sem2Col != -1 && sem2Col < row.length
+          ? row[sem2Col]?.value?.toString().trim() ?? ""
+          : "";
+
+      if (sem2.isNotEmpty) {
+        semester = "Semester 2";
+      } else if (sem1.isNotEmpty) {
+        semester = "Semester 1";
+      }
+
+      moduleDetails[moduleCode.toUpperCase().trim()] = {
+        'moduleCode': moduleCode.toUpperCase().trim(),
+        'moduleName': moduleName,
+        'lecturerName': lecturerName,
+        'semester': semester,
+      };
+    }
+
+    //print("PARSED MODULE DETAILS -> ${moduleDetails.keys.toList()}");
+    //print("PUSL2020 -> ${moduleDetails['PUSL2020']}");
+    //print("PUSL2023 -> ${moduleDetails['PUSL2023']}");
+
+    return moduleDetails;
   }
 
   List<TimetableEntry> _extractEntriesFromCell({
@@ -150,7 +250,7 @@ class ExcelService {
 
     if (!upper.contains("PUSL")) {
       final degreeMatch = RegExp(r'\(([^)]*)\)').firstMatch(cellText);
-      final extractedDegree = degreeMatch?.group(1)?.trim();
+      final extractedDegree = degreeMatch?.group(1)?.trim() ?? "";
 
       final isGlobalSpecial =
           upper.contains("HOLIDAY") ||
@@ -163,9 +263,7 @@ class ExcelService {
           moduleCode: "SPECIAL",
           degree: isGlobalSpecial
               ? "ALL"
-              : (extractedDegree == null || extractedDegree.isEmpty
-                    ? "ALL"
-                    : extractedDegree),
+              : (extractedDegree.isEmpty ? "ALL" : extractedDegree),
           day: day,
           startTime: startTime,
           endTime: endTime,

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../Models/Module.dart';
+import '../../Services/ModuleService.dart';
 import '../../Theme/theme.dart';
+import 'ModuleFileScreen.dart';
 
 class Notes extends StatefulWidget {
   const Notes({super.key});
@@ -9,67 +12,40 @@ class Notes extends StatefulWidget {
 }
 
 class _NotesState extends State<Notes> {
-  final List<_ModuleFileItem> _modules = const [
-    _ModuleFileItem(
-      moduleName: 'Mobile Application Development',
-      moduleCode: 'PUSL 2344',
-      totalFiles: 12,
-      accentColor: AppColors.teal,
-      lastUpdated: 'Updated today',
-    ),
-    _ModuleFileItem(
-      moduleName: 'Software Engineering',
-      moduleCode: 'PUSL 2023',
-      totalFiles: 9,
-      accentColor: AppColors.purple,
-      lastUpdated: 'Updated yesterday',
-    ),
-    _ModuleFileItem(
-      moduleName: 'Introduction to IoT',
-      moduleCode: 'PUSL 2032',
-      totalFiles: 7,
-      accentColor: AppColors.blue,
-      lastUpdated: 'Updated 2 days ago',
-    ),
-    _ModuleFileItem(
-      moduleName: 'Information Management',
-      moduleCode: 'PUSL 2025',
-      totalFiles: 10,
-      accentColor: AppColors.amber,
-      lastUpdated: 'Updated this week',
-    ),
+  final ModuleService _moduleService = ModuleService();
+
+  final List<Color> _accentColors = const [
+    AppColors.teal,
+    AppColors.purple,
+    AppColors.blue,
+    AppColors.amber,
+    AppColors.coral,
   ];
 
-  final List<_RecentUpdateItem> _recentUpdates = const [
-    _RecentUpdateItem(
-      title: 'Week 05 Lecture Summary added',
-      moduleName: 'Mobile Application Development',
-      time: 'Today • 5:40 PM',
-      icon: Icons.auto_awesome_rounded,
-      color: AppColors.teal,
-    ),
-    _RecentUpdateItem(
-      title: 'Database Design Note updated',
-      moduleName: 'Software Engineering',
-      time: 'Yesterday • 8:10 PM',
-      icon: Icons.sticky_note_2_rounded,
-      color: AppColors.amber,
-    ),
-    _RecentUpdateItem(
-      title: 'Lecture Transcript saved',
-      moduleName: 'Introduction to IoT',
-      time: 'Yesterday • 3:05 PM',
-      icon: Icons.description_rounded,
-      color: AppColors.blue,
-    ),
-    _RecentUpdateItem(
-      title: 'New Recording uploaded',
-      moduleName: 'Information Management',
-      time: 'Mar 28 • 7:15 PM',
-      icon: Icons.mic_rounded,
-      color: AppColors.coral,
-    ),
-  ];
+  String _formatUpdatedText(DateTime? dateTime) {
+    if (dateTime == null) return 'Updated recently';
+
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'Updated just now';
+    } else if (difference.inHours < 1) {
+      return 'Updated ${difference.inMinutes} min ago';
+    } else if (difference.inDays < 1) {
+      return 'Updated today';
+    } else if (difference.inDays == 1) {
+      return 'Updated yesterday';
+    } else if (difference.inDays < 7) {
+      return 'Updated ${difference.inDays} days ago';
+    } else {
+      return 'Updated this month';
+    }
+  }
+
+  Color _getAccentColor(int index) {
+    return _accentColors[index % _accentColors.length];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,38 +69,52 @@ class _NotesState extends State<Notes> {
                 ),
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: _modules.isEmpty
-                  ? SliverToBoxAdapter(child: _buildEmptyState())
-                  : SliverList.separated(
-                      itemCount: _modules.length,
-                      itemBuilder: (context, index) {
-                        final module = _modules[index];
-                        return _buildModuleCard(module);
-                      },
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+            StreamBuilder<List<Module>>(
+              stream: _moduleService.getUserModulesStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SliverToBoxAdapter(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: CircularProgressIndicator(),
+                      ),
                     ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 10),
-                child: _buildSectionTitle(
-                  title: 'Recent Updates',
-                  subtitle: 'Latest activity from your module files',
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              sliver: SliverList.separated(
-                itemCount: _recentUpdates.length,
-                itemBuilder: (context, index) {
-                  final item = _recentUpdates[index];
-                  return _buildRecentUpdateCard(item);
-                },
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-              ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildErrorState(snapshot.error.toString()),
+                    ),
+                  );
+                }
+
+                final modules = snapshot.data ?? [];
+
+                if (modules.isEmpty) {
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverToBoxAdapter(
+                      child: _buildEmptyState(),
+                    ),
+                  );
+                }
+
+                return SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList.separated(
+                    itemCount: modules.length,
+                    itemBuilder: (context, index) {
+                      final module = modules[index];
+                      return _buildModuleCard(module, index);
+                    },
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -159,15 +149,19 @@ class _NotesState extends State<Notes> {
     );
   }
 
-  Widget _buildModuleCard(_ModuleFileItem module) {
+  Widget _buildModuleCard(Module module, int index) {
+    final accentColor = _getAccentColor(index);
+    final displayName = module.moduleName.isNotEmpty
+        ? module.moduleName
+        : module.moduleCode;
+
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${module.moduleName} clicked'),
-            backgroundColor: AppColors.bg2,
-            behavior: SnackBarBehavior.floating,
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ModuleFilesScreen(module: module),
           ),
         );
       },
@@ -189,7 +183,7 @@ class _NotesState extends State<Notes> {
               ),
               child: Icon(
                 Icons.folder_rounded,
-                color: module.accentColor,
+                color: accentColor,
                 size: 28,
               ),
             ),
@@ -199,7 +193,7 @@ class _NotesState extends State<Notes> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    module.moduleName,
+                    displayName,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -218,9 +212,9 @@ class _NotesState extends State<Notes> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${module.totalFiles} files • ${module.lastUpdated}',
+                    '${module.totalFiles} files • ${_formatUpdatedText(module.updatedAt)}',
                     style: TextStyle(
-                      color: module.accentColor,
+                      color: accentColor,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
                     ),
@@ -234,70 +228,6 @@ class _NotesState extends State<Notes> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildRecentUpdateCard(_RecentUpdateItem item) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.bg2,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.bg4),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: AppColors.bg3,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              item.icon,
-              color: item.color,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    height: 1.3,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.moduleName,
-                  style: const TextStyle(
-                    color: AppColors.text2,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  item.time,
-                  style: const TextStyle(
-                    color: AppColors.text3,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -340,36 +270,43 @@ class _NotesState extends State<Notes> {
       ),
     );
   }
-}
 
-class _ModuleFileItem {
-  final String moduleName;
-  final String moduleCode;
-  final int totalFiles;
-  final Color accentColor;
-  final String lastUpdated;
-
-  const _ModuleFileItem({
-    required this.moduleName,
-    required this.moduleCode,
-    required this.totalFiles,
-    required this.accentColor,
-    required this.lastUpdated,
-  });
-}
-
-class _RecentUpdateItem {
-  final String title;
-  final String moduleName;
-  final String time;
-  final IconData icon;
-  final Color color;
-
-  const _RecentUpdateItem({
-    required this.title,
-    required this.moduleName,
-    required this.time,
-    required this.icon,
-    required this.color,
-  });
+  Widget _buildErrorState(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.bg2,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.bg4),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 42,
+            color: AppColors.coral,
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Failed to load modules',
+            style: TextStyle(
+              color: AppColors.text,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.text2,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

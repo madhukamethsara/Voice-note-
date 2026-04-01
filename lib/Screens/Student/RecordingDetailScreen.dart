@@ -5,6 +5,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:voicenote/Models/Recording.dart';
 
+import '../../Models/Module.dart';
+import '../../Models/NoteFileItem.dart';
+import '../../Services/ModuleService.dart';
+import '../../Services/NoteFile.dart';
+import '../../Services/RecordingFirestore.dart';
+
 class RecordingDetailScreen extends StatefulWidget {
   final RecordingItem recording;
 
@@ -32,6 +38,11 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
   static const Color text2 = Color(0xFF8B92B8);
 
   late final AudioPlayer _audioPlayer;
+
+  final ModuleService _moduleService = ModuleService();
+  final NoteFileService _noteFileService = NoteFileService();
+  final RecordingFirestoreService _recordingFirestoreService =
+      RecordingFirestoreService();
 
   int _selectedTab = 0;
   bool _isPlaying = false;
@@ -113,76 +124,153 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
     }
   }
 
-  void _showMoveToModuleSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: bg2,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        final modules = [
-          'Data Structures',
-          'Software Eng.',
-          'Database',
-          'Mobile Application Development',
-        ];
+  Future<void> _showMoveToModuleSheet() async {
+    try {
+      final modules = await _moduleService.getUserModules();
 
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Move to Module',
-                style: GoogleFonts.syne(
-                  color: text,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Select a module for this recording',
-                style: GoogleFonts.dmSans(
-                  color: text2,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...modules.map(
-                (module) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.folder_rounded, color: teal),
-                  title: Text(
-                    module,
-                    style: GoogleFonts.dmSans(
-                      color: text,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: bg3,
-                        behavior: SnackBarBehavior.floating,
-                        content: Text(
-                          'Move to $module comes next',
-                          style: GoogleFonts.dmSans(color: text),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
+      if (!mounted) return;
+
+      if (modules.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: bg3,
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              'No modules found',
+              style: GoogleFonts.dmSans(color: text),
+            ),
           ),
         );
-      },
+        return;
+      }
+
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: bg2,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (sheetContext) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Move to Module',
+                  style: GoogleFonts.syne(
+                    color: text,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Select a module for this recording',
+                  style: GoogleFonts.dmSans(
+                    color: text2,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...modules.map(
+                  (module) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.folder_rounded, color: teal),
+                    title: Text(
+                      module.moduleName.isNotEmpty
+                          ? module.moduleName
+                          : module.moduleCode,
+                      style: GoogleFonts.dmSans(
+                        color: text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      module.moduleCode,
+                      style: GoogleFonts.dmSans(
+                        color: text2,
+                        fontSize: 12,
+                      ),
+                    ),
+                    onTap: () async {
+                      Navigator.pop(sheetContext);
+                      await _moveRecordingToModule(module);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: bg3,
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            'Failed to load modules: $e',
+            style: GoogleFonts.dmSans(color: text),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _moveRecordingToModule(Module module) async {
+    final recording = widget.recording;
+
+    final noteFile = NoteFileItem(
+      id: recording.id,
+      title: "Recording ${recording.createdAt}",
+      moduleName: module.moduleName,
+      moduleCode: module.moduleCode,
+      type: "recording",
+      audioPath: recording.path,
+      transcript: recording.transcript,
+      summary: recording.summary,
+      createdAt: recording.createdAt,
+      updatedAt: DateTime.now(),
     );
+
+    try {
+      await _noteFileService.addFile(noteFile);
+
+      await _recordingFirestoreService.updateRecording(
+        recording.copyWith(module: module.moduleCode),
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: bg3,
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            'Moved to ${module.moduleCode}',
+            style: GoogleFonts.dmSans(color: text),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: bg3,
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            'Failed: $e',
+            style: GoogleFonts.dmSans(color: text),
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildTab(String title, int index) {
