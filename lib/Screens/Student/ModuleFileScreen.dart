@@ -14,7 +14,7 @@ class ModuleFilesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final NoteFileService _noteFileService = NoteFileService();
+    final NoteFileService noteFileService = NoteFileService();
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -37,7 +37,7 @@ class ModuleFilesScreen extends StatelessWidget {
       ),
 
       body: StreamBuilder<List<NoteFileItem>>(
-        stream: _noteFileService.getFilesByModule(module.moduleCode),
+        stream: noteFileService.getFilesByModule(module.moduleCode),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

@@ -14,7 +14,6 @@ class TranscriptionService {
     }
 
     final fileName = file.path.split(Platform.pathSeparator).last;
-
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(
         file.path,
