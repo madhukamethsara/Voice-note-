@@ -27,6 +27,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final List<String> _years = ['Year 1', 'Year 2', 'Year 3', 'Year 4'];
 
   bool _isLoading = false;
+  
+  final Map<String, String?> _errors = {};
 
   bool get _isStudent => widget.role == 'student';
 
@@ -41,47 +43,82 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  
+  void _setFieldError(String field, String msg) {
+    setState(() {
+      _errors[field] = msg;
+      _isLoading = false;
+    });
+  }
+
+  
+  void _clearErrors() {
+    setState(() {
+      _errors.clear();
+    });
+  }
+
   Future<void> _doRegister() async {
-    if (_nameCtrl.text.trim().isEmpty ||
-        _emailCtrl.text.trim().isEmpty ||
-        _passCtrl.text.trim().isEmpty ||
-        _uniCtrl.text.trim().isEmpty) {
-      _showSnack('Please fill all required fields');
-      return;
+    _clearErrors();
+
+    final name = _nameCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+    final pass = _passCtrl.text.trim();
+    final uni = _uniCtrl.text.trim();
+    final degree = _degreeCtrl.text.trim();
+    final dept = _deptCtrl.text.trim();
+
+    
+    if (name.isEmpty) return _setFieldError('name', 'Name is required');
+    if (email.isEmpty) return _setFieldError('email', 'Email is required');
+    if (pass.isEmpty) return _setFieldError('pass', 'Password is required');
+    if (uni.isEmpty) return _setFieldError('uni', 'University is required');
+
+    if (_isStudent && degree.isEmpty) {
+      return _setFieldError('degree', 'Degree is required');
+    }
+    if (!_isStudent && dept.isEmpty) {
+      return _setFieldError('dept', 'Department is required');
     }
 
-    if (_isStudent && _degreeCtrl.text.trim().isEmpty) {
-      _showSnack('Please enter your degree');
-      return;
+    
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      return _setFieldError('email', 'Invalid email format');
     }
 
-    if (!_isStudent && _deptCtrl.text.trim().isEmpty) {
-      _showSnack('Please enter your department');
-      return;
+    
+    if (pass.length < 6) {
+      return _setFieldError('pass', 'Min. 6 characters');
     }
-
-    if (_passCtrl.text.trim().length < 6) {
-      _showSnack('Password must be at least 6 characters');
-      return;
+    if (!pass.contains(RegExp(r'[A-Z]'))) {
+      return _setFieldError('pass', 'Needs an uppercase letter');
+    }
+    if (!pass.contains(RegExp(r'[a-z]'))) {
+      return _setFieldError('pass', 'Needs a lowercase letter');
+    }
+    if (!pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>_]'))) {
+      return _setFieldError('pass', 'Needs a special character');
     }
 
     setState(() => _isLoading = true);
 
     try {
       await _authService.registerUser(
-        fullName: _nameCtrl.text.trim(),
-        email: _emailCtrl.text.trim(),
-        password: _passCtrl.text.trim(),
+        fullName: name,
+        email: email,
+        password: pass,
         role: widget.role,
-        university: _uniCtrl.text.trim(),
-        degree: _isStudent ? _degreeCtrl.text.trim() : null,
+        university: uni,
+        degree: _isStudent ? degree : null,
         yearOfStudy: _isStudent ? _selectedYear : null,
-        department: _isStudent ? null : _deptCtrl.text.trim(),
+        department: _isStudent ? null : dept,
       );
 
       if (!mounted) return;
-
-      _showSnack('Account created successfully');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account created successfully')),
+      );
 
       if (_isStudent) {
         context.go('/Student/Dasboard');
@@ -90,7 +127,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      _showSnack(e.toString().replaceFirst('Exception: ', ''));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -98,8 +137,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  Widget _buildFieldLabel(String label, String? error) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: dmStyle(
+            size: 11,
+            weight: FontWeight.w500,
+            color: AppColors.text2,
+          ),
+        ),
+        if (error != null)
+          Text(
+            error,
+            style: dmStyle(
+              size: 10,
+              weight: FontWeight.bold,
+              color: Colors.redAccent,
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -115,73 +175,86 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildFieldLabel('Full name', _errors['name']),
+            const SizedBox(height: 4),
             LabeledField(
-              label: 'Full name',
+              label: '', 
               hint: 'e.g. Ashan Perera',
               controller: _nameCtrl,
+              onChanged: (_) => setState(() => _errors['name'] = null),
             ),
             const SizedBox(height: 12),
+
+            _buildFieldLabel('Email', _errors['email']),
+            const SizedBox(height: 4),
             LabeledField(
-              label: 'Email',
+              label: '',
               hint: 'you@university.edu',
               keyboardType: TextInputType.emailAddress,
               controller: _emailCtrl,
+              onChanged: (_) => setState(() => _errors['email'] = null),
             ),
             const SizedBox(height: 12),
+
+            _buildFieldLabel('Password', _errors['pass']),
+            const SizedBox(height: 4),
             LabeledField(
-              label: 'Password',
-              hint: 'Min. 6 characters',
+              label: '',
+              hint: 'Min. 6 chars, A-z, @',
               obscure: true,
               controller: _passCtrl,
+              onChanged: (_) => setState(() => _errors['pass'] = null),
             ),
             const SizedBox(height: 12),
+
+            _buildFieldLabel('University', _errors['uni']),
+            const SizedBox(height: 4),
             LabeledField(
-              label: 'University',
+              label: '',
               hint: 'University of Colombo',
               controller: _uniCtrl,
+              onChanged: (_) => setState(() => _errors['uni'] = null),
             ),
             const SizedBox(height: 12),
 
             if (_isStudent) ...[
+              _buildFieldLabel('Degree', _errors['degree']),
+              const SizedBox(height: 4),
               LabeledField(
-                label: 'Degree',
+                label: '',
                 hint: 'Software Engineering',
                 controller: _degreeCtrl,
+                onChanged: (_) => setState(() => _errors['degree'] = null),
               ),
               const SizedBox(height: 12),
               Text(
                 'Year of study',
-                style: dmStyle(
-                  size: 11,
-                  weight: FontWeight.w500,
-                  color: AppColors.text2,
-                ),
+                style: dmStyle(size: 11, weight: FontWeight.w500, color: AppColors.text2),
               ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: _years
-                    .map(
-                      (y) => _YearPill(
-                        label: y,
-                        selected: _selectedYear == y,
-                        onTap: () => setState(() => _selectedYear = y),
-                      ),
-                    )
-                    .toList(),
+                children: _years.map((y) => _YearPill(
+                  label: y,
+                  selected: _selectedYear == y,
+                  onTap: () => setState(() => _selectedYear = y),
+                )).toList(),
               ),
             ],
 
-            if (!_isStudent)
+            if (!_isStudent) ...[
+              _buildFieldLabel('Department', _errors['dept']),
+              const SizedBox(height: 4),
               LabeledField(
-                label: 'Department',
+                label: '',
                 hint: 'e.g. Computer Science',
                 controller: _deptCtrl,
+                onChanged: (_) => setState(() => _errors['dept'] = null),
               ),
+            ],
 
             const SizedBox(height: 24),
-
             PrimaryButton(
               label: _isLoading ? 'Creating...' : 'Create Account',
               onTap: _isLoading ? () {} : _doRegister,
@@ -203,11 +276,7 @@ class _YearPill extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _YearPill({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+  const _YearPill({required this.label, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
