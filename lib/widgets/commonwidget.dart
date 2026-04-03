@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/theme.dart';
 
-//normal button
+// normal button
 class PrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
@@ -66,6 +66,8 @@ class LabeledField extends StatelessWidget {
   final bool obscure;
   final TextInputType keyboardType;
   final TextEditingController? controller;
+  final Function(String)? onChanged; 
+  final String? errorText; 
 
   const LabeledField({
     super.key,
@@ -74,6 +76,8 @@ class LabeledField extends StatelessWidget {
     this.obscure = false,
     this.keyboardType = TextInputType.text,
     this.controller,
+    this.onChanged, 
+    this.errorText, 
   });
 
   @override
@@ -81,15 +85,22 @@ class LabeledField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: dmStyle(size: 11, weight: FontWeight.w500, color: AppColors.text2)),
-        const SizedBox(height: 4),
+        if (label.isNotEmpty) ...[
+          Text(label,
+              style: dmStyle(size: 11, weight: FontWeight.w500, color: AppColors.text2)),
+          const SizedBox(height: 4),
+        ],
         TextField(
           controller: controller,
           obscureText: obscure,
           keyboardType: keyboardType,
+          onChanged: onChanged, 
           style: dmStyle(size: 13),
-          decoration: InputDecoration(hintText: hint),
+          decoration: InputDecoration(
+            hintText: hint,
+            
+            errorText: errorText, 
+          ),
         ),
       ],
     );
@@ -117,7 +128,7 @@ class SectionLabel extends StatelessWidget {
   }
 }
 
-//top bar 
+// top bar 
 class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool showBack;
@@ -148,7 +159,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                 child: Container(
                   width: 32,
                   height: 32,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.bg3,
                     shape: BoxShape.circle,
                   ),
