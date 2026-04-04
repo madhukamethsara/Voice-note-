@@ -12,7 +12,20 @@
           "package_name": "com.example.voicenote"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "114336459925-s24a71rhp466dtmicvqkjifumf7rbjiu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.voicenote",
+            "certificate_hash": "62349e7bb1d1784c9e01ece5331d6d95c9b21d5f"
+          }
+        },
+        {
+          "client_id": "114336459925-nc31mcg0jpigp0k5ddimkf66e7fo38vq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBMJsALfbU61wsCfex4qELkTlDma6uZ1Yk"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "114336459925-nc31mcg0jpigp0k5ddimkf66e7fo38vq.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "114336459925-rtdng9rpkpe5s8pg8i6l3gif05o4h9sf.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.voiceapp"
+              }
+            }
+          ]
         }
       }
     }

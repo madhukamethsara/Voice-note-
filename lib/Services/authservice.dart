@@ -1,10 +1,15 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../Models/AppUser.dart';
 import 'UserService.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final UserService _userService = UserService();
+  
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  
+  bool _isGoogleInitialized = false;
 
   User? get currentFirebaseUser => _auth.currentUser;
 
@@ -82,6 +87,64 @@ class AuthService {
     }
   }
 
+  Future<AppUser> signInWithGoogle({String? defaultRole}) async {
+    try {
+      
+      if (!_isGoogleInitialized) {
+        await _googleSignIn.initialize(
+          serverClientId: '114336459925-nc31mcg0jpigp0k5ddimkf66e7fo38vq.apps.googleusercontent.com', 
+        );
+        _isGoogleInitialized = true;
+      }
+
+      
+      final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
+      if (googleUser == null) {
+        throw Exception('Google sign in was cancelled.');
+      }
+
+      
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+
+      
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+      );
+
+      
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user;
+
+      if (user == null) {
+        throw Exception('Firebase sign in with Google failed.');
+      }
+
+      
+      AppUser? appUser = await _userService.getUserByUid(user.uid);
+
+      
+      if (appUser == null) {
+        appUser = AppUser(
+          uid: user.uid,
+          fullName: user.displayName ?? 'Unknown User',
+          email: user.email ?? '',
+          role: defaultRole ?? 'student', 
+          university: 'Not Specified',    
+          degree: defaultRole == 'student' ? 'Not Specified' : null,
+          department: defaultRole == 'lecturer' ? 'Not Specified' : null,
+        );
+        
+        await _userService.saveUser(appUser);
+      }
+
+      return appUser;
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_getAuthErrorMessage(e));
+    } catch (e) {
+      throw Exception('Google authentication failed: $e');
+    }
+  }
+
   Future<AppUser?> getCurrentAppUser() async {
     final user = _auth.currentUser;
 
@@ -93,6 +156,10 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    
+    if (_isGoogleInitialized) {
+      await _googleSignIn.signOut();
+    }
     await _auth.signOut();
   }
 
