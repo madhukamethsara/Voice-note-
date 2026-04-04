@@ -48,7 +48,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (appUser.role.toLowerCase() == 'student') {
         context.go('/Student/Dasboard');
       } else if (appUser.role.toLowerCase() == 'lecturer') {
-        context.go('/lecturer-home');
+        // Updated to match your old file's correct path
+        context.go('/Lecturer/Dashboard');
       } else {
         _showSnack('Unknown user role');
       }
@@ -64,7 +65,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
+      SnackBar(
+        content: Text(msg),
+        behavior: SnackBarBehavior.floating, // Restored from old file
+        backgroundColor: AppColors.bg2,       // Restored from old file
+      ),
     );
   }
 
@@ -97,7 +102,6 @@ class _LoginScreenState extends State<LoginScreen> {
               onTap: _isLoading ? null : _doLogin,
             ),
             const SizedBox(height: 16),
-            const SizedBox(height: 16),
             Center(
               child: Text(
                 '— or —',
@@ -106,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 10),
             OutlineButton2(
-              label: '🔵  Continue with Google',
+              label: '🔵   Continue with Google',
               onTap: () {
                 _showSnack('Google login not implemented yet');
               },

@@ -43,7 +43,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  
   void _setFieldError(String field, String msg) {
     setState(() {
       _errors[field] = msg;
@@ -51,7 +50,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
   }
 
-  
   void _clearErrors() {
     setState(() {
       _errors.clear();
@@ -68,7 +66,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final degree = _degreeCtrl.text.trim();
     final dept = _deptCtrl.text.trim();
 
-    
     if (name.isEmpty) return _setFieldError('name', 'Name is required');
     if (email.isEmpty) return _setFieldError('email', 'Email is required');
     if (pass.isEmpty) return _setFieldError('pass', 'Password is required');
@@ -81,13 +78,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return _setFieldError('dept', 'Department is required');
     }
 
-    
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(email)) {
       return _setFieldError('email', 'Invalid email format');
     }
 
-    
     if (pass.length < 6) {
       return _setFieldError('pass', 'Min. 6 characters');
     }
@@ -116,6 +111,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (!mounted) return;
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Account created successfully')),
       );
@@ -123,7 +119,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (_isStudent) {
         context.go('/Student/Dasboard');
       } else {
-        context.go('/lecturer-home');
+        // Updated to match your old file's correct path
+        context.go('/Lecturer/Dashboard');
       }
     } catch (e) {
       if (!mounted) return;
