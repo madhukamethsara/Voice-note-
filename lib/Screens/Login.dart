@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
 
   bool _isLoading = false;
+  final Map<String, String?> _errors = {};
 
   @override
   void dispose() {
@@ -27,39 +28,72 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _doLogin() async {
-    if (_emailCtrl.text.trim().isEmpty || _passCtrl.text.trim().isEmpty) {
-      _showSnack('Please enter email and password');
-      return;
+  void _setFieldError(String field, String msg) {
+    setState(() {
+      _errors[field] = msg;
+      _isLoading = false;
+    });
+  }
+
+  void _clearErrors() {
+    setState(() {
+      _errors.clear();
+    });
+  }
+
+  void _routeUser(AppUser appUser) {
+    _showSnack('Logged in successfully');
+    if (appUser.role.toLowerCase() == 'student') {
+      context.go('/Student/Dasboard');
+    } else if (appUser.role.toLowerCase() == 'lecturer') {
+      context.go('/Lecturer/Dashboard');
+    } else {
+      _showSnack('Unknown user role');
     }
+  }
+
+  Future<void> _doLogin() async {
+    _clearErrors(); 
+
+    final email = _emailCtrl.text.trim();
+    final pass = _passCtrl.text.trim();
+
+    if (email.isEmpty) return _setFieldError('email', 'Email is required');
+    if (pass.isEmpty) return _setFieldError('pass', 'Password is required');
 
     setState(() => _isLoading = true);
 
     try {
       final AppUser appUser = await _authService.loginUser(
-        email: _emailCtrl.text.trim(),
-        password: _passCtrl.text.trim(),
+        email: email,
+        password: pass,
       );
 
       if (!mounted) return;
+      _routeUser(appUser);
 
-      _showSnack('Logged in successfully');
-
-      if (appUser.role.toLowerCase() == 'student') {
-        context.go('/Student/Dasboard');
-      } else if (appUser.role.toLowerCase() == 'lecturer') {
-        // Updated to match your old file's correct path
-        context.go('/Lecturer/Dashboard');
-      } else {
-        _showSnack('Unknown user role');
-      }
     } catch (e) {
       final errorMessage = e.toString().replaceFirst('Exception: ', '');
       _showSnack(errorMessage);
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  
+  Future<void> _doGoogleLogin() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final AppUser appUser = await _authService.signInWithGoogle();
+      if (!mounted) return;
+      _routeUser(appUser);
+      
+    } catch (e) {
+      final errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _showSnack(errorMessage);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -67,9 +101,26 @@ class _LoginScreenState extends State<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        behavior: SnackBarBehavior.floating, // Restored from old file
-        backgroundColor: AppColors.bg2,       // Restored from old file
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.bg2,
       ),
+    );
+  }
+
+  Widget _buildFieldLabel(String label, String? error) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: dmStyle(size: 11, weight: FontWeight.w500, color: AppColors.text2),
+        ),
+        if (error != null)
+          Text(
+            error,
+            style: dmStyle(size: 10, weight: FontWeight.bold, color: Colors.redAccent),
+          ),
+      ],
     );
   }
 
@@ -77,28 +128,36 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppTopBar(title: 'Welcome back', onBack: () => context.pop()),
+      appBar: AppTopBar(title: 'Welcome back', onBack: () => context.go('/')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildFieldLabel('Email', _errors['email']),
+            const SizedBox(height: 4),
             LabeledField(
-              label: 'Email',
+              label: '', 
               hint: 'you@university.edu',
               keyboardType: TextInputType.emailAddress,
               controller: _emailCtrl,
+              onChanged: (_) => setState(() => _errors['email'] = null),
             ),
             const SizedBox(height: 12),
+            
+            _buildFieldLabel('Password', _errors['pass']),
+            const SizedBox(height: 4),
             LabeledField(
-              label: 'Password',
+              label: '',
               hint: 'Your password',
               obscure: true,
               controller: _passCtrl,
+              onChanged: (_) => setState(() => _errors['pass'] = null),
             ),
             const SizedBox(height: 20),
+            
             PrimaryButton(
-              label: _isLoading ? 'Logging in...' : 'Log in',
+              label: _isLoading ? 'Please wait...' : 'Log in',
               onTap: _isLoading ? null : _doLogin,
             ),
             const SizedBox(height: 16),
@@ -110,10 +169,8 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 10),
             OutlineButton2(
-              label: '🔵   Continue with Google',
-              onTap: () {
-                _showSnack('Google login not implemented yet');
-              },
+              label: '🔵  Continue with Google',
+              onTap: _isLoading ? () {} : _doGoogleLogin, 
             ),
           ],
         ),

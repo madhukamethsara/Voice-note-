@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../Theme/theme.dart';
 import '../widgets/commonwidget.dart';
-import '../Services/AuthService.dart';
+import '../Services/authservice.dart';
+import '../Models/AppUser.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String role;
@@ -27,7 +28,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final List<String> _years = ['Year 1', 'Year 2', 'Year 3', 'Year 4'];
 
   bool _isLoading = false;
-  
   final Map<String, String?> _errors = {};
 
   bool get _isStudent => widget.role == 'student';
@@ -54,6 +54,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() {
       _errors.clear();
     });
+  }
+
+  void _routeUser(AppUser appUser, String successMsg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(successMsg)),
+    );
+
+    if (appUser.role.toLowerCase() == 'student') {
+      context.go('/Student/Dasboard');
+    } else {
+      context.go('/Lecturer/Dashboard');
+    }
   }
 
   Future<void> _doRegister() async {
@@ -83,23 +95,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return _setFieldError('email', 'Invalid email format');
     }
 
-    if (pass.length < 6) {
-      return _setFieldError('pass', 'Min. 6 characters');
-    }
-    if (!pass.contains(RegExp(r'[A-Z]'))) {
-      return _setFieldError('pass', 'Needs an uppercase letter');
-    }
-    if (!pass.contains(RegExp(r'[a-z]'))) {
-      return _setFieldError('pass', 'Needs a lowercase letter');
-    }
-    if (!pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>_]'))) {
-      return _setFieldError('pass', 'Needs a special character');
-    }
+    if (pass.length < 6) return _setFieldError('pass', 'Min. 6 characters');
+    if (!pass.contains(RegExp(r'[A-Z]'))) return _setFieldError('pass', 'Needs an uppercase letter');
+    if (!pass.contains(RegExp(r'[a-z]'))) return _setFieldError('pass', 'Needs a lowercase letter');
+    if (!pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>_]'))) return _setFieldError('pass', 'Needs a special character');
 
     setState(() => _isLoading = true);
 
     try {
-      await _authService.registerUser(
+      final AppUser appUser = await _authService.registerUser(
         fullName: name,
         email: email,
         password: pass,
@@ -111,26 +115,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created successfully')),
-      );
+      _routeUser(appUser, 'Account created successfully');
 
-      if (_isStudent) {
-        context.go('/Student/Dasboard');
-      } else {
-        // Updated to match your old file's correct path
-        context.go('/Lecturer/Dashboard');
-      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  
+  Future<void> _doGoogleRegister() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      
+      final AppUser appUser = await _authService.signInWithGoogle(defaultRole: widget.role);
+      
+      if (!mounted) return;
+      _routeUser(appUser, 'Signed in with Google successfully');
+      
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -140,20 +154,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Text(
           label,
-          style: dmStyle(
-            size: 11,
-            weight: FontWeight.w500,
-            color: AppColors.text2,
-          ),
+          style: dmStyle(size: 11, weight: FontWeight.w500, color: AppColors.text2),
         ),
         if (error != null)
           Text(
             error,
-            style: dmStyle(
-              size: 10,
-              weight: FontWeight.bold,
-              color: Colors.redAccent,
-            ),
+            style: dmStyle(size: 10, weight: FontWeight.bold, color: Colors.redAccent),
           ),
       ],
     );
@@ -253,13 +259,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
             const SizedBox(height: 24),
             PrimaryButton(
-              label: _isLoading ? 'Creating...' : 'Create Account',
+              label: _isLoading ? 'Please wait...' : 'Create Account',
               onTap: _isLoading ? () {} : _doRegister,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            
+            
+            Center(
+              child: Text(
+                '— or —',
+                style: dmStyle(size: 11, color: AppColors.text3),
+              ),
+            ),
+            const SizedBox(height: 10),
             OutlineButton2(
-              label: 'Already have an account? Log in',
-              onTap: () => context.push('/login'),
+              label: '🔵  Continue with Google',
+              onTap: _isLoading ? () {} : _doGoogleRegister, 
+            ),
+            
+            const SizedBox(height: 16),
+            Center(
+              child: GestureDetector(
+                onTap: () => context.push('/Login'),
+                child: Text(
+                  'Already have an account? Log in',
+                  style: dmStyle(size: 12, color: AppColors.teal, weight: FontWeight.w600),
+                ),
+              ),
             ),
           ],
         ),
