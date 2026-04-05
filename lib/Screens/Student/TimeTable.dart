@@ -3,12 +3,13 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:voicenote/Services/ModuleService.dart';
+import 'package:voicenote/Services/File/ModuleService.dart';
 
-import 'package:voicenote/Services/FileService.dart';
+import 'package:voicenote/Services/File/FileService.dart';
 import 'package:voicenote/Services/ExcelService.dart';
 import 'package:voicenote/Services/TimetableService.dart';
 import 'package:voicenote/Models/TimetableEntry.dart';
+import 'package:voicenote/Theme/theme_helper.dart';
 
 class TimetableScreen extends StatefulWidget {
   const TimetableScreen({super.key});
@@ -81,10 +82,12 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
     } catch (e) {
       if (!mounted) return;
 
+      final colors = context.colors;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error loading student degree: $e"),
-          backgroundColor: const Color(0xFF141720),
+          backgroundColor: colors.bg2,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -97,10 +100,12 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
       if (user == null) return;
 
       if (_studentDegree.isEmpty) {
+        final colors = context.colors;
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Student degree not found"),
-            backgroundColor: Color(0xFF141720),
+          SnackBar(
+            content: const Text("Student degree not found"),
+            backgroundColor: colors.bg2,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -112,10 +117,12 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
       if (!mounted) return;
 
       if (file == null) {
+        final colors = context.colors;
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("No file selected"),
-            backgroundColor: Color(0xFF141720),
+          SnackBar(
+            content: const Text("No file selected"),
+            backgroundColor: colors.bg2,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -125,10 +132,12 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
       final Uint8List? bytes = _fileService.getFileBytes(file);
 
       if (bytes == null) {
+        final colors = context.colors;
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Could not read file bytes"),
-            backgroundColor: Color(0xFF141720),
+          SnackBar(
+            content: const Text("Could not read file bytes"),
+            backgroundColor: colors.bg2,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -165,22 +174,26 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
 
       await _loadFilteredTimetable();
 
+      if (!mounted) return;
+      final colors = context.colors;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             "Parsed, filtered, saved & loaded ${filteredEntries.length} timetable entries",
           ),
-          backgroundColor: const Color(0xFF141720),
+          backgroundColor: colors.bg2,
           behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (e) {
       if (!mounted) return;
+      final colors = context.colors;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error reading Excel: $e"),
-          backgroundColor: const Color(0xFF141720),
+          backgroundColor: colors.bg2,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -215,10 +228,12 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
         _isLoadingTimetable = false;
       });
 
+      final colors = context.colors;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error loading timetable: $e"),
-          backgroundColor: const Color(0xFF141720),
+          backgroundColor: colors.bg2,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -258,40 +273,42 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
   }
 
   Color _getColorForEntry(TimetableEntry entry) {
+    final colors = context.colors;
     final text = entry.rawText.toUpperCase();
 
-    if (text.contains("EXAM")) return const Color(0xFFFF6B6B);
+    if (text.contains("EXAM")) return colors.coral;
     if (text.contains("COURSEWORK") || text.contains("SUBMISSION")) {
-      return const Color(0xFFFFC145);
+      return colors.amber;
     }
-    if (text.contains("VIVA")) return const Color(0xFFA78BFA);
+    if (text.contains("VIVA")) return colors.purple;
     if (text.contains("HOLIDAY") ||
         text.contains("POYADAY") ||
         text.contains("STUDY LEAVE") ||
         text.contains("INDEPENDENCE DAY")) {
-      return const Color(0xFF60A5FA);
+      return colors.blue;
     }
 
-    return const Color(0xFF00E5B0);
+    return colors.teal;
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final selectedDay = days[selectedDayIndex];
     final sessions = (_studentDegree.isEmpty || _firebaseEntries.isEmpty)
         ? (timetableData[selectedDay] ?? [])
         : _buildDaySessions();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0F14),
+      backgroundColor: colors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF141720),
+        backgroundColor: colors.bg2,
         elevation: 0,
         centerTitle: true,
         title: Text(
           "Timetable (Week $_currentWeek)",
-          style: const TextStyle(
-            color: Color(0xFFF0F2FF),
+          style: TextStyle(
+            color: colors.text,
             fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
@@ -305,10 +322,10 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
             children: [
               _buildUploadCard(),
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 "Select Day",
                 style: TextStyle(
-                  color: Color(0xFF8B92B8),
+                  color: colors.text2,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.8,
@@ -337,13 +354,11 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? const Color(0x1400E5B0)
-                              : const Color(0xFF141720),
+                              ? colors.teal.withOpacity(0.08)
+                              : colors.bg2,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: isSelected
-                                ? const Color(0xFF00E5B0)
-                                : const Color(0xFF232840),
+                            color: isSelected ? colors.teal : colors.bg4,
                             width: 1.4,
                           ),
                         ),
@@ -351,9 +366,7 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                           child: Text(
                             days[index],
                             style: TextStyle(
-                              color: isSelected
-                                  ? const Color(0xFF00E5B0)
-                                  : const Color(0xFF8B92B8),
+                              color: isSelected ? colors.teal : colors.text2,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -367,39 +380,39 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
               const SizedBox(height: 20),
               Text(
                 "$selectedDay Schedule",
-                style: const TextStyle(
-                  color: Color(0xFFF0F2FF),
+                style: TextStyle(
+                  color: colors.text,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 12),
               _isLoadingTimetable
-                  ? const Center(
+                  ? Center(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
+                        padding: const EdgeInsets.symmetric(vertical: 20),
                         child: CircularProgressIndicator(
-                          color: Color(0xFF00E5B0),
+                          color: colors.teal,
                         ),
                       ),
                     )
                   : sessions.isEmpty
-                  ? _buildEmptyState(selectedDay)
-                  : Column(
-                      children: sessions.map((session) {
-                        return _buildTimeTableRow(
-                          time: session["time"],
-                          subject: session["subject"],
-                          place: session["place"],
-                          color: session["color"],
-                        );
-                      }).toList(),
-                    ),
+                      ? _buildEmptyState(selectedDay)
+                      : Column(
+                          children: sessions.map((session) {
+                            return _buildTimeTableRow(
+                              time: session["time"],
+                              subject: session["subject"],
+                              place: session["place"],
+                              color: session["color"],
+                            );
+                          }).toList(),
+                        ),
               const SizedBox(height: 22),
-              const Text(
+              Text(
                 "Upcoming Exams & Deadlines",
                 style: TextStyle(
-                  color: Color(0xFFF0F2FF),
+                  color: colors.text,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -414,29 +427,31 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
   }
 
   Widget _buildUploadCard() {
+    final colors = context.colors;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF141720),
+        color: colors.bg2,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF232840)),
+        border: Border.all(color: colors.bg4),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(
                 Icons.upload_file_rounded,
-                color: Color(0xFF00E5B0),
+                color: colors.teal,
                 size: 22,
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Text(
                 "Upload Timetable",
                 style: TextStyle(
-                  color: Color(0xFFF0F2FF),
+                  color: colors.text,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
@@ -444,10 +459,10 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             "Choose your Excel file and later we can read the timetable data and save it to the database.",
             style: TextStyle(
-              color: Color(0xFF8B92B8),
+              color: colors.text2,
               fontSize: 12,
               height: 1.5,
             ),
@@ -456,8 +471,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
             const SizedBox(height: 8),
             Text(
               "Selected: $_selectedFileName",
-              style: const TextStyle(
-                color: Color(0xFF00E5B0),
+              style: TextStyle(
+                color: colors.teal,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -469,8 +484,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
             child: ElevatedButton(
               onPressed: _uploadTimetable,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00E5B0),
-                foregroundColor: Colors.black,
+                backgroundColor: colors.teal,
+                foregroundColor: colors.black,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -494,6 +509,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
     required String place,
     required Color color,
   }) {
+    final colors = context.colors;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -506,8 +523,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
               child: Text(
                 time,
                 textAlign: TextAlign.right,
-                style: const TextStyle(
-                  color: Color(0xFF555E7A),
+                style: TextStyle(
+                  color: colors.text3,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
@@ -530,8 +547,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                     subject,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFFF0F2FF),
+                    style: TextStyle(
+                      color: colors.text,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -541,8 +558,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                     place,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF8B92B8),
+                    style: TextStyle(
+                      color: colors.text2,
                       fontSize: 11,
                       height: 1.4,
                     ),
@@ -557,18 +574,20 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
   }
 
   Widget _buildExamCard() {
+    final colors = context.colors;
+
     if (_upcomingEntries.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF141720),
+          color: colors.bg2,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFF232840)),
+          border: Border.all(color: colors.bg4),
         ),
-        child: const Text(
+        child: Text(
           "No upcoming exams 🎉",
-          style: TextStyle(color: Color(0xFF8B92B8), fontSize: 12),
+          style: TextStyle(color: colors.text2, fontSize: 12),
         ),
       );
     }
@@ -582,11 +601,11 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
 
         Color progressColor;
         if (weeksLeft > 4) {
-          progressColor = const Color(0xFF00E5B0);
+          progressColor = colors.teal;
         } else if (weeksLeft > 2) {
-          progressColor = const Color(0xFFFFC145);
+          progressColor = colors.amber;
         } else {
-          progressColor = const Color(0xFFFF6B6B);
+          progressColor = colors.coral;
         }
 
         return Padding(
@@ -595,7 +614,7 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF141720),
+              color: colors.bg2,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: progressColor.withOpacity(0.4)),
             ),
@@ -604,8 +623,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
               children: [
                 Text(
                   entry.rawText.trim(),
-                  style: const TextStyle(
-                    color: Color(0xFFF0F2FF),
+                  style: TextStyle(
+                    color: colors.text,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -613,8 +632,8 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                 const SizedBox(height: 6),
                 Text(
                   "${entry.day} · ${entry.startTime}",
-                  style: const TextStyle(
-                    color: Color(0xFF8B92B8),
+                  style: TextStyle(
+                    color: colors.text2,
                     fontSize: 11,
                   ),
                 ),
@@ -624,7 +643,7 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 6,
-                    backgroundColor: const Color(0xFF232840),
+                    backgroundColor: colors.bg4,
                     valueColor: AlwaysStoppedAnimation(progressColor),
                   ),
                 ),
@@ -646,36 +665,38 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
   }
 
   Widget _buildEmptyState(String currentDay) {
+    final colors = context.colors;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF141720),
+        color: colors.bg2,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF232840)),
+        border: Border.all(color: colors.bg4),
       ),
       child: Column(
         children: [
-          const Icon(
+          Icon(
             Icons.event_busy_rounded,
-            color: Color(0xFF8B92B8),
+            color: colors.text2,
             size: 30,
           ),
           const SizedBox(height: 10),
           Text(
             "No lectures for Week $_currentWeek $currentDay",
-            style: const TextStyle(
-              color: Color(0xFFF0F2FF),
+            style: TextStyle(
+              color: colors.text,
               fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             "Wait for data or check if you uploaded the correct timetable.",
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFF8B92B8),
+              color: colors.text2,
               fontSize: 12,
               height: 1.5,
             ),

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../theme/theme.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../Theme/theme_helper.dart';
 
-//normal button
+// normal button
 class PrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
@@ -16,6 +17,8 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return AnimatedOpacity(
       opacity: enabled ? 1.0 : 0.4,
       duration: const Duration(milliseconds: 200),
@@ -24,42 +27,73 @@ class PrimaryButton extends StatelessWidget {
         height: 46,
         child: ElevatedButton(
           onPressed: enabled ? onTap : null,
-          child: Text(label, style: syneStyle(size: 15, color: Colors.black)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: colors.teal,
+            foregroundColor: colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.syne(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: colors.black,
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-// button outline
+// outline button
 class OutlineButton2 extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
 
-  const OutlineButton2({super.key, required this.label, this.onTap});
+  const OutlineButton2({
+    super.key,
+    required this.label,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return SizedBox(
       width: double.infinity,
       height: 46,
       child: OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.text2,
-          side: const BorderSide(color: AppColors.bg4, width: 1.5),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: syneStyle(size: 13, color: AppColors.text2),
+          foregroundColor: colors.text2,
+          side: BorderSide(color: colors.bg4, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          textStyle: GoogleFonts.syne(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: colors.text2,
+          ),
         ),
-        child: Text(label,
-            style: syneStyle(size: 13, color: AppColors.text2)),
+        child: Text(
+          label,
+          style: GoogleFonts.syne(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: colors.text2,
+          ),
+        ),
       ),
     );
   }
 }
 
-// labels text
+// labeled text field
 class LabeledField extends StatelessWidget {
   final String label;
   final String hint;
@@ -78,46 +112,80 @@ class LabeledField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: dmStyle(size: 11, weight: FontWeight.w500, color: AppColors.text2)),
+        Text(
+          label,
+          style: GoogleFonts.dmSans(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: colors.text2,
+          ),
+        ),
         const SizedBox(height: 4),
         TextField(
           controller: controller,
           obscureText: obscure,
           keyboardType: keyboardType,
-          style: dmStyle(size: 13),
-          decoration: InputDecoration(hintText: hint),
+          style: GoogleFonts.dmSans(
+            fontSize: 13,
+            color: colors.text,
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.dmSans(
+              fontSize: 13,
+              color: colors.text3,
+            ),
+            filled: true,
+            fillColor: colors.bg2,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: colors.bg4),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: colors.teal),
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
         ),
       ],
     );
   }
 }
 
-// Section labels
+// section labels
 class SectionLabel extends StatelessWidget {
   final String text;
+
   const SectionLabel(this.text, {super.key});
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Padding(
       padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Text(
         text.toUpperCase(),
-        style: dmStyle(
-          size: 11,
-          weight: FontWeight.w600,
-          color: AppColors.text3,
-        ).copyWith(letterSpacing: 1.1),
+        style: GoogleFonts.dmSans(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: colors.text3,
+          letterSpacing: 1.1,
+        ),
       ),
     );
   }
 }
 
-//top bar 
+// top bar
 class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool showBack;
@@ -137,6 +205,8 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
@@ -149,19 +219,28 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: AppColors.bg3,
+                    color: colors.bg3,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.chevron_left,
-                      color: AppColors.text2, size: 20),
+                  child: Icon(
+                    Icons.chevron_left,
+                    color: colors.text2,
+                    size: 20,
+                  ),
                 ),
               )
             else
               const SizedBox(width: 32),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(title,
-                  style: syneStyle(size: 17, weight: FontWeight.w700)),
+              child: Text(
+                title,
+                style: GoogleFonts.syne(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: colors.text,
+                ),
+              ),
             ),
             if (trailing != null) trailing!,
           ],

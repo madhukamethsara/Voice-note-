@@ -137,6 +137,45 @@ app.post("/transcribe", upload.single("file"), async (req, res) => {
   }
 });
 
+app.post("/summarize", async (req, res) => {
+  try {
+    console.log("=== /summarize HIT ===");
+
+    const { text } = req.body;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: "Text is required" });
+    }
+
+    const prompt = `
+You are an AI assistant helping university students.
+
+Summarize the following lecture content clearly and concisely.
+Keep key technical terms and concepts.
+
+Text:
+${text}
+`;
+
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+    });
+
+    const summary =
+      response.choices?.[0]?.message?.content?.trim() || "";
+
+    return res.json({ summary });
+  } catch (error) {
+    console.error("SUMMARY ERROR:", error);
+
+    return res.status(500).json({
+      error: "Failed to summarize",
+      details: error?.message || "Unknown summary error",
+    });
+  }
+});
 
 app.post('/generate-daily-quiz', async (req, res) => {
   try {
