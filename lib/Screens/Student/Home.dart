@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:voicenote/Models/AppUser.dart';
 import 'package:voicenote/Models/TimetableEntry.dart';
-import 'package:voicenote/Services/authservices.dart';
+import 'package:voicenote/Services/auth/authservice.dart';
 import 'package:voicenote/Services/TimetableService.dart';
 import 'package:voicenote/Screens/Student/ExamFocus.dart';
 import 'package:voicenote/Screens/Student/FlashcardsScreen.dart';
@@ -145,7 +145,9 @@ class _HomeState extends State<Home> {
             const SizedBox(height: 10),
 
             if (_isLoading)
-              Center(child: CircularProgressIndicator(color: colors.teal))
+              Center(
+                child: CircularProgressIndicator(color: colors.teal),
+              )
             else if (_todaySchedule.isEmpty)
               _buildEmptyScheduleNotice(colors)
             else
@@ -338,7 +340,10 @@ class _StatCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: colors.text2, fontSize: 12)),
+          Text(
+            label,
+            style: TextStyle(color: colors.text2, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -399,7 +404,10 @@ class _ScheduleTile extends StatelessWidget {
                   subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: colors.text2, fontSize: 12),
+                  style: TextStyle(
+                    color: colors.text2,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),

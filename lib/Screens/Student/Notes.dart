@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import '../../Models/Module.dart';
-import '../../Services/ModuleService.dart';
+import '../../Services/File/ModuleService.dart';
+import '../../Services/File/NoteFile.dart';
 import '../../Theme/theme_helper.dart';
+import '../Common/ModuleChatScreen.dart';
 import 'ModuleFileScreen.dart';
 
 class Notes extends StatefulWidget {
   final String senderName;
   final String senderRole;
 
-  const Notes({super.key, required this.senderName, required this.senderRole});
+  const Notes({
+    super.key,
+    required this.senderName,
+    required this.senderRole,
+  });
 
   @override
   State<Notes> createState() => _NotesState();
@@ -16,11 +22,53 @@ class Notes extends StatefulWidget {
 
 class _NotesState extends State<Notes> {
   final ModuleService _moduleService = ModuleService();
+  final NoteFileService _noteFileService = NoteFileService();
+
+  String _formatUpdatedText(DateTime? dateTime) {
+    if (dateTime == null) return 'No updates';
+
+    final accentColors = [
+      colors.teal,
+      colors.purple,
+      colors.blue,
+      colors.amber,
+      colors.coral,
+    ];
+
+    if (difference.inMinutes < 1) return 'Updated just now';
+    if (difference.inMinutes < 60) {
+      return 'Updated ${difference.inMinutes} min ago';
+    }
+    if (difference.inHours < 24) {
+      return 'Updated ${difference.inHours} hr ago';
+    }
+    if (difference.inDays == 1) return 'Updated yesterday';
+    if (difference.inDays < 7) return 'Updated ${difference.inDays} days ago';
+    return 'Updated ${dateTime.day}/${dateTime.month}/${dateTime.year}';
+  }
 
   void _openModuleFiles(BuildContext context, Module module) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => ModuleFilesScreen(module: module)),
+      MaterialPageRoute(
+        builder: (_) => ModuleFilesScreen(module: module),
+      ),
+    );
+  }
+
+  void _openModuleChat(BuildContext context, Module module) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ModuleChatScreen(
+          moduleCode: module.moduleCode,
+          moduleName: module.moduleName.isNotEmpty
+              ? module.moduleName
+              : module.moduleCode,
+          senderName: widget.senderName,
+          senderRole: widget.senderRole,
+        ),
+      ),
     );
   }
 
@@ -54,7 +102,7 @@ class _NotesState extends State<Notes> {
                     _buildSectionTitle(
                       context,
                       'Your Modules',
-                      'Open files by module',
+                      'Open files or chat by module',
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -69,7 +117,9 @@ class _NotesState extends State<Notes> {
                     child: Center(
                       child: Padding(
                         padding: const EdgeInsets.all(24),
-                        child: CircularProgressIndicator(color: colors.teal),
+                        child: CircularProgressIndicator(
+                          color: colors.teal,
+                        ),
                       ),
                     ),
                   );
@@ -141,7 +191,13 @@ class _NotesState extends State<Notes> {
           ),
         ),
         const SizedBox(height: 4),
-        Text(subtitle, style: TextStyle(color: colors.text2, fontSize: 12)),
+        Text(
+          subtitle,
+          style: TextStyle(
+            color: colors.text2,
+            fontSize: 12,
+          ),
+        ),
       ],
     );
   }
@@ -196,21 +252,76 @@ class _NotesState extends State<Notes> {
                   const SizedBox(height: 4),
                   Text(
                     module.moduleCode,
-                    style: TextStyle(color: colors.text2, fontSize: 12),
+                    style: TextStyle(
+                      color: colors.text2,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    'Open module files',
-                    style: TextStyle(
-                      color: accentColor,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
+                  StreamBuilder<ModuleFileStats>(
+                    stream: _noteFileService.getModuleFileStats(
+                      module.moduleCode,
                     ),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Text(
+                          'Checking files...',
+                          style: TextStyle(
+                            color: accentColor,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        );
+                      }
+
+                      if (snapshot.hasError) {
+                        return Text(
+                          '0 files • No updates',
+                          style: TextStyle(
+                            color: accentColor,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        );
+                      }
+
+                      final stats = snapshot.data ??
+                          ModuleFileStats(
+                            fileCount: 0,
+                            latestUpdatedAt: null,
+                          );
+
+                      return Text(
+                        '${stats.fileCount} file${stats.fileCount == 1 ? '' : 's'} • ${_formatUpdatedText(stats.latestUpdatedAt)}',
+                        style: TextStyle(
+                          color: accentColor,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: colors.text3),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Open module chat',
+                  onPressed: () => _openModuleChat(context, module),
+                  icon: Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    color: colors.teal,
+                    size: 22,
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: colors.text3,
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -243,7 +354,10 @@ class _NotesState extends State<Notes> {
           const SizedBox(height: 6),
           Text(
             'Your module files will appear here.',
-            style: TextStyle(color: colors.text2, fontSize: 12),
+            style: TextStyle(
+              color: colors.text2,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -263,7 +377,11 @@ class _NotesState extends State<Notes> {
       ),
       child: Column(
         children: [
-          Icon(Icons.error_outline_rounded, size: 42, color: colors.coral),
+          Icon(
+            Icons.error_outline_rounded,
+            size: 42,
+            color: colors.coral,
+          ),
           const SizedBox(height: 10),
           Text(
             'Failed to load modules',
@@ -274,7 +392,13 @@ class _NotesState extends State<Notes> {
             ),
           ),
           const SizedBox(height: 6),
-          Text(message, style: TextStyle(color: colors.text2, fontSize: 12)),
+          Text(
+            message,
+            style: TextStyle(
+              color: colors.text2,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );

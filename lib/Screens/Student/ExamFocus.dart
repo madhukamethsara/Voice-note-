@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:voicenote/Models/QuizQuestion.dart';
-import 'package:voicenote/Services/QuizPromptBuilder.dart';
-import 'package:voicenote/Services/QuizService.dart';
-import 'package:voicenote/Services/QuizSummaryService.dart';
-import 'package:voicenote/Services/QuizAttemptService.dart';
-import 'package:voicenote/Services/FlashcardService.dart';
+import 'package:voicenote/Services/Quiz/QuizPromptBuilder.dart';
+import 'package:voicenote/Services/Ai/QuizService.dart';
+import 'package:voicenote/Services/Quiz/QuizSummaryService.dart';
+import 'package:voicenote/Services/Quiz/QuizAttemptService.dart';
+import 'package:voicenote/Services/Quiz/FlashcardService.dart';
 import '../../Theme/theme_helper.dart';
 
 class ExamFocusScreen extends StatefulWidget {
@@ -148,9 +148,9 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to save quiz result: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save quiz result: $e')),
+      );
     }
   }
 
@@ -167,10 +167,15 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
         backgroundColor: colors.bg,
         elevation: 0,
         iconTheme: IconThemeData(color: colors.text),
-        title: Text('Exam Focus', style: TextStyle(color: colors.text)),
+        title: Text(
+          'Exam Focus',
+          style: TextStyle(color: colors.text),
+        ),
       ),
       body: _isLoadingModules
-          ? Center(child: CircularProgressIndicator(color: colors.teal))
+          ? Center(
+              child: CircularProgressIndicator(color: colors.teal),
+            )
           : Column(
               children: [
                 Padding(
@@ -196,7 +201,10 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                         const SizedBox(height: 8),
                         Text(
                           'Choose a module and create 20 quiz questions from saved Firestore summaries.',
-                          style: TextStyle(color: colors.text2, fontSize: 13),
+                          style: TextStyle(
+                            color: colors.text2,
+                            fontSize: 13,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
@@ -239,9 +247,8 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _isGeneratingQuiz
-                                ? null
-                                : _generateExamPack,
+                            onPressed:
+                                _isGeneratingQuiz ? null : _generateExamPack,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: colors.teal,
                               foregroundColor: colors.black,
@@ -287,7 +294,10 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                       ? Center(
                           child: Text(
                             'No quiz generated yet.',
-                            style: TextStyle(color: colors.text2, fontSize: 14),
+                            style: TextStyle(
+                              color: colors.text2,
+                              fontSize: 14,
+                            ),
                           ),
                         )
                       : ListView.builder(
@@ -329,7 +339,9 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                                       activeColor: colors.teal,
                                       title: Text(
                                         option,
-                                        style: TextStyle(color: colors.text),
+                                        style: TextStyle(
+                                          color: colors.text,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -347,12 +359,16 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                                     const SizedBox(height: 4),
                                     Text(
                                       'Correct Answer: ${q.correctAnswer}',
-                                      style: TextStyle(color: colors.text2),
+                                      style: TextStyle(
+                                        color: colors.text2,
+                                      ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       'Explanation: ${q.explanation}',
-                                      style: TextStyle(color: colors.text2),
+                                      style: TextStyle(
+                                        color: colors.text2,
+                                      ),
                                     ),
                                   ],
                                 ],

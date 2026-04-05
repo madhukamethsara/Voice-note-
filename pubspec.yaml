@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+    
   provider: ^6.1.2
   cupertino_icons: ^1.0.8
   google_fonts: ^6.3.2
@@ -39,5 +39,11 @@ flutter:
   uses-material-design: true
 
   assets:
-  - lib/Assets/logo.png
-
+    - lib/Assets/logo.png
+    - lib/Assets/recording.png
+    - lib/Assets/filehandling.png
+    - lib/Assets/mcq.png
+    - lib/Assets/flashcards.png
+    - lib/Assets/Timetable.png
+    
+    

@@ -3,9 +3,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:voicenote/Services/ModuleService.dart';
+import 'package:voicenote/Services/File/ModuleService.dart';
 
-import 'package:voicenote/Services/FileService.dart';
+import 'package:voicenote/Services/File/FileService.dart';
 import 'package:voicenote/Services/ExcelService.dart';
 import 'package:voicenote/Services/TimetableService.dart';
 import 'package:voicenote/Models/TimetableEntry.dart';
@@ -391,21 +391,23 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                   ? Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: CircularProgressIndicator(color: colors.teal),
+                        child: CircularProgressIndicator(
+                          color: colors.teal,
+                        ),
                       ),
                     )
                   : sessions.isEmpty
-                  ? _buildEmptyState(selectedDay)
-                  : Column(
-                      children: sessions.map((session) {
-                        return _buildTimeTableRow(
-                          time: session["time"],
-                          subject: session["subject"],
-                          place: session["place"],
-                          color: session["color"],
-                        );
-                      }).toList(),
-                    ),
+                      ? _buildEmptyState(selectedDay)
+                      : Column(
+                          children: sessions.map((session) {
+                            return _buildTimeTableRow(
+                              time: session["time"],
+                              subject: session["subject"],
+                              place: session["place"],
+                              color: session["color"],
+                            );
+                          }).toList(),
+                        ),
               const SizedBox(height: 22),
               Text(
                 "Upcoming Exams & Deadlines",
@@ -440,7 +442,11 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.upload_file_rounded, color: colors.teal, size: 22),
+              Icon(
+                Icons.upload_file_rounded,
+                color: colors.teal,
+                size: 22,
+              ),
               const SizedBox(width: 10),
               Text(
                 "Upload Timetable",
@@ -455,7 +461,11 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
           const SizedBox(height: 8),
           Text(
             "Choose your Excel file and later we can read the timetable data and save it to the database.",
-            style: TextStyle(color: colors.text2, fontSize: 12, height: 1.5),
+            style: TextStyle(
+              color: colors.text2,
+              fontSize: 12,
+              height: 1.5,
+            ),
           ),
           if (_selectedFileName != null) ...[
             const SizedBox(height: 8),
@@ -622,7 +632,10 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                 const SizedBox(height: 6),
                 Text(
                   "${entry.day} · ${entry.startTime}",
-                  style: TextStyle(color: colors.text2, fontSize: 11),
+                  style: TextStyle(
+                    color: colors.text2,
+                    fontSize: 11,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 ClipRRect(
@@ -664,7 +677,11 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
       ),
       child: Column(
         children: [
-          Icon(Icons.event_busy_rounded, color: colors.text2, size: 30),
+          Icon(
+            Icons.event_busy_rounded,
+            color: colors.text2,
+            size: 30,
+          ),
           const SizedBox(height: 10),
           Text(
             "No lectures for Week $_currentWeek $currentDay",
@@ -678,7 +695,11 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
           Text(
             "Wait for data or check if you uploaded the correct timetable.",
             textAlign: TextAlign.center,
-            style: TextStyle(color: colors.text2, fontSize: 12, height: 1.5),
+            style: TextStyle(
+              color: colors.text2,
+              fontSize: 12,
+              height: 1.5,
+            ),
           ),
         ],
       ),

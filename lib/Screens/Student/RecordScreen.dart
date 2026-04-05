@@ -9,13 +9,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 import 'package:voicenote/Models/Recording.dart';
-import 'package:voicenote/Services/RecordingStorage.dart';
-import 'package:voicenote/Services/Summary.dart';
-import 'package:voicenote/Services/Transcription.dart';
+import 'package:voicenote/Services/Recording/RecordingStorage.dart';
+import 'package:voicenote/Services/Ai/Summary.dart';
+import 'package:voicenote/Services/Ai/Transcription.dart';
 import 'package:voicenote/Screens/Student/RecordingDetailScreen.dart';
 import 'package:voicenote/Models/NoteFileItem.dart';
-import 'package:voicenote/Services/NoteFileStorage.dart';
-import 'package:voicenote/Services/RecordingFirestore.dart';
+import 'package:voicenote/Services/File/NoteFileStorage.dart';
+import 'package:voicenote/Services/Recording/RecordingFirestore.dart';
 import 'package:voicenote/Theme/theme_helper.dart';
 
 class RecordScreen extends StatefulWidget {
@@ -661,9 +661,8 @@ class _RecordScreenState extends State<RecordScreen>
       animation: _pulseController,
       builder: (context, child) {
         final spread = isRecording ? 16 * _pulseController.value : 0.0;
-        final opacity = isRecording
-            ? (0.4 * (1 - _pulseController.value))
-            : 0.0;
+        final opacity =
+            isRecording ? (0.4 * (1 - _pulseController.value)) : 0.0;
 
         return Container(
           decoration: BoxDecoration(
@@ -691,6 +690,12 @@ class _RecordScreenState extends State<RecordScreen>
                 border: Border.all(
                   color: isRecording ? colors.coral : colors.teal,
                   width: 2,
+                ),
+              ),
+              child: const Center(
+                child: Text(
+                  '🎙️',
+                  style: TextStyle(fontSize: 32),
                 ),
               ),
               child: const Center(
@@ -890,11 +895,10 @@ class _RecordScreenState extends State<RecordScreen>
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color:
-                      (item.module == 'Software Eng.'
-                              ? colors.amber
-                              : colors.teal)
-                          .withOpacity(0.10),
+                  color: (item.module == 'Software Eng.'
+                          ? colors.amber
+                          : colors.teal)
+                      .withOpacity(0.10),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
@@ -979,7 +983,11 @@ class _RecordScreenState extends State<RecordScreen>
             ),
             IconButton(
               onPressed: () => _deleteRecording(item),
-              icon: Icon(Icons.delete_outline, color: colors.text2, size: 18),
+              icon: Icon(
+                Icons.delete_outline,
+                color: colors.text2,
+                size: 18,
+              ),
             ),
           ],
         ),
@@ -1009,9 +1017,8 @@ class _RecordScreenState extends State<RecordScreen>
             ),
           )
         else
-          ..._recentRecordings.map(
-            (item) => _buildRecentRecordingCard(context, item),
-          ),
+          ..._recentRecordings
+              .map((item) => _buildRecentRecordingCard(context, item)),
       ],
     );
   }

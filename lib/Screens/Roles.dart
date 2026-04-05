@@ -80,7 +80,10 @@ class _RoleSelectScreenState extends State<RoleSelectScreen>
                 Text(
                   'Choose your role to get started',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: colors.text2, fontSize: 13),
+                  style: TextStyle(
+                    color: colors.text2,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 _RoleCard(
@@ -161,7 +164,10 @@ class _RoleCard extends StatelessWidget {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(color: colors.text2, fontSize: 12),
+              style: TextStyle(
+                color: colors.text2,
+                fontSize: 12,
+              ),
             ),
           ],
         ),

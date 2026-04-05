@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:voicenote/Models/Onboardingitem.dart';
-import 'package:voicenote/Services/Onboardingservice.dart';
+import 'package:voicenote/Services/onboardingservice.dart';
 import 'package:voicenote/Theme/theme_helper.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -120,7 +120,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       decoration: BoxDecoration(
         color: colors.bg2,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colors.text3.withOpacity(0.12)),
+        border: Border.all(
+          color: colors.text3.withOpacity(0.12),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.10),
@@ -158,7 +160,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text(
             item.subtitle,
             textAlign: TextAlign.center,
-            style: TextStyle(color: colors.text2, fontSize: 15.5, height: 1.55),
+            style: TextStyle(
+              color: colors.text2,
+              fontSize: 15.5,
+              height: 1.55,
+            ),
           ),
         ],
       ),
@@ -233,7 +239,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        _buildFeatureCard(context: context, item: item),
+                        _buildFeatureCard(
+                          context: context,
+                          item: item,
+                        ),
                         const Spacer(),
                       ],
                     );

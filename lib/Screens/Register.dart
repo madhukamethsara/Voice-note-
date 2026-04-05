@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../Theme/theme_helper.dart';
 import '../widgets/commonwidget.dart';
-import 'package:voicenote/Services/authservices.dart';
+import '../Services/auth/authservice.dart';
+
 
 class RegisterScreen extends StatefulWidget {
   final String role;
@@ -83,6 +84,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       _showSnack('Account created successfully');
 
+     
       context.push('/onboarding');
     } catch (e) {
       if (!mounted) return;

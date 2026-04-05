@@ -7,9 +7,9 @@ import 'package:voicenote/Models/Recording.dart';
 
 import '../../Models/Module.dart';
 import '../../Models/NoteFileItem.dart';
-import '../../Services/ModuleService.dart';
-import '../../Services/NoteFile.dart';
-import '../../Services/RecordingFirestore.dart';
+import '../../Services/File/ModuleService.dart';
+import '../../Services/File/NoteFile.dart';
+import '../../Services/Recording/RecordingFirestore.dart';
 import '../../Theme/theme_helper.dart';
 
 class RecordingDetailScreen extends StatefulWidget {

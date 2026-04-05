@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/commonwidget.dart';
-import 'package:voicenote/Services/authservices.dart';
+import '../Services/auth/authservice.dart';
 import '../Models/AppUser.dart';
 import '../Theme/theme_helper.dart';
 
@@ -72,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: colors.bg,
-      appBar: AppTopBar(title: 'Welcome back', onBack: () => context.go('/')),
+      appBar: AppTopBar(title: 'Welcome back', onBack: () => context.go('/'),),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
         child: Column(

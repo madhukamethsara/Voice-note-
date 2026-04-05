@@ -43,24 +43,18 @@ class _SplashScreenState extends State<SplashScreen>
     );
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(
-          begin: 0.0,
-          end: 1.12,
-        ).chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween(begin: 0.0, end: 1.12)
+            .chain(CurveTween(curve: Curves.easeOut)),
         weight: 60,
       ),
       TweenSequenceItem(
-        tween: Tween(
-          begin: 1.12,
-          end: 0.96,
-        ).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween(begin: 1.12, end: 0.96)
+            .chain(CurveTween(curve: Curves.easeInOut)),
         weight: 20,
       ),
       TweenSequenceItem(
-        tween: Tween(
-          begin: 0.96,
-          end: 1.0,
-        ).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween(begin: 0.96, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
         weight: 20,
       ),
     ]).animate(_scaleController);
@@ -165,9 +159,8 @@ class _SplashScreenState extends State<SplashScreen>
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: colors.black.withOpacity(
-                                      _glowAnimation.value,
-                                    ),
+                                    color: colors.black
+                                        .withOpacity(_glowAnimation.value),
                                     blurRadius: 60,
                                     spreadRadius: 10,
                                   ),
@@ -190,6 +183,7 @@ class _SplashScreenState extends State<SplashScreen>
 
               const SizedBox(height: 20),
 
+         
               AnimatedBuilder(
                 animation: _buttonsController,
                 builder: (context, child) {

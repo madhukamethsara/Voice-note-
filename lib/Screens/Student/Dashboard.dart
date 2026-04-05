@@ -34,7 +34,10 @@ class _StudentMainScreenState extends State<Dashboard> {
       const Home(),
       const TimetableScreen(),
       const RecordScreen(),
-      Notes(senderName: widget.senderName, senderRole: widget.senderRole),
+      Notes(
+        senderName: widget.senderName,
+        senderRole: widget.senderRole,
+      ),
       const ProfileScreen(),
     ];
   }
@@ -45,7 +48,10 @@ class _StudentMainScreenState extends State<Dashboard> {
 
     return Scaffold(
       backgroundColor: colors.bg,
-      body: IndexedStack(index: _currentIndex, children: _pages),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         backgroundColor: colors.bg2,
@@ -92,7 +98,10 @@ class StudentTimetableScreen extends StatelessWidget {
     final colors = context.colors;
 
     return Center(
-      child: Text("Timetable Screen", style: TextStyle(color: colors.text)),
+      child: Text(
+        "Timetable Screen",
+        style: TextStyle(color: colors.text),
+      ),
     );
   }
 }
@@ -105,7 +114,10 @@ class StudentRecordScreen extends StatelessWidget {
     final colors = context.colors;
 
     return Center(
-      child: Text("Record Screen", style: TextStyle(color: colors.text)),
+      child: Text(
+        "Record Screen",
+        style: TextStyle(color: colors.text),
+      ),
     );
   }
 }
@@ -118,7 +130,10 @@ class StudentNotesScreen extends StatelessWidget {
     final colors = context.colors;
 
     return Center(
-      child: Text("Notes Screen", style: TextStyle(color: colors.text)),
+      child: Text(
+        "Notes Screen",
+        style: TextStyle(color: colors.text),
+      ),
     );
   }
 }

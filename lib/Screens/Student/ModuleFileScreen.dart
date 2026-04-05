@@ -3,14 +3,17 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../Models/Module.dart';
 import '../../Models/NoteFileItem.dart';
-import 'package:voicenote/Services/NoteFile.dart';
+import 'package:voicenote/Services/File/NoteFile.dart';
 import '../../Theme/theme_helper.dart';
 import 'RecordingDetailScreen.dart';
 
 class ModuleFilesScreen extends StatelessWidget {
   final Module module;
 
-  const ModuleFilesScreen({super.key, required this.module});
+  const ModuleFilesScreen({
+    super.key,
+    required this.module,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +28,10 @@ class ModuleFilesScreen extends StatelessWidget {
         centerTitle: false,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.chevron_left_rounded, color: colors.text),
+          icon: Icon(
+            Icons.chevron_left_rounded,
+            color: colors.text,
+          ),
         ),
         title: Text(
           module.moduleName.isNotEmpty ? module.moduleName : module.moduleCode,
@@ -40,7 +46,11 @@ class ModuleFilesScreen extends StatelessWidget {
         stream: noteFileService.getFilesByModule(module.moduleCode),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator(color: colors.teal));
+            return Center(
+              child: CircularProgressIndicator(
+                color: colors.teal,
+              ),
+            );
           }
 
           if (snapshot.hasError) {
@@ -107,13 +117,12 @@ class ModuleFilesScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final file = files[index];
 
-              final previewText =
-                  (file.summary != null && file.summary!.trim().isNotEmpty)
+              final previewText = (file.summary != null &&
+                      file.summary!.trim().isNotEmpty)
                   ? file.summary!
-                  : (file.transcript != null &&
-                        file.transcript!.trim().isNotEmpty)
-                  ? file.transcript!
-                  : "No preview available";
+                  : (file.transcript != null && file.transcript!.trim().isNotEmpty)
+                      ? file.transcript!
+                      : "No preview available";
 
               final isRecording = file.type.toLowerCase() == "recording";
 
@@ -169,9 +178,7 @@ class ModuleFilesScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              file.title.isNotEmpty
-                                  ? file.title
-                                  : "Untitled File",
+                              file.title.isNotEmpty ? file.title : "Untitled File",
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.dmSans(
@@ -214,7 +221,10 @@ class ModuleFilesScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.chevron_right_rounded, color: colors.text3),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: colors.text3,
+                      ),
                     ],
                   ),
                 ),

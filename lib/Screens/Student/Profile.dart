@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../Models/AppUser.dart';
-import 'package:voicenote/Services/authservices.dart';
+import '../../Services/auth/authservice.dart';
 import '../../Services/UserService.dart';
 import '../../Theme/theme_helper.dart';
 import '../../Theme/theme_notifier.dart';
@@ -87,9 +87,9 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Update failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Update failed: $e')),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -113,6 +113,9 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colors.teal),
       ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
@@ -122,7 +125,13 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      title: Text(title, style: TextStyle(color: colors.text2, fontSize: 13)),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: colors.text2,
+          fontSize: 13,
+        ),
+      ),
       trailing: Flexible(
         child: Text(
           value,
@@ -184,7 +193,9 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
             backgroundColor: colors.bg,
-            body: Center(child: CircularProgressIndicator(color: colors.teal)),
+            body: Center(
+              child: CircularProgressIndicator(color: colors.teal),
+            ),
           );
         }
 
@@ -231,7 +242,11 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
                   CircleAvatar(
                     radius: 42,
                     backgroundColor: colors.bg4,
-                    child: Icon(Icons.person, size: 42, color: colors.teal),
+                    child: Icon(
+                      Icons.person,
+                      size: 42,
+                      color: colors.teal,
+                    ),
                   ),
 
                   const SizedBox(height: 14),
@@ -249,7 +264,10 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
 
                   Text(
                     user.email,
-                    style: TextStyle(color: colors.text2, fontSize: 13),
+                    style: TextStyle(
+                      color: colors.text2,
+                      fontSize: 13,
+                    ),
                   ),
 
                   const SizedBox(height: 18),
@@ -312,9 +330,8 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  onPressed: _isSaving
-                                      ? null
-                                      : () => _saveChanges(user),
+                                  onPressed:
+                                      _isSaving ? null : () => _saveChanges(user),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: colors.teal,
                                     foregroundColor: colors.black,
@@ -359,7 +376,11 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
                                 user.department ?? 'Not set',
                               ),
                               Divider(color: colors.bg4),
-                              _buildProfileRow(context, "Role", user.role),
+                              _buildProfileRow(
+                                context,
+                                "Role",
+                                user.role,
+                              ),
                             ],
                           ),
                   ),
