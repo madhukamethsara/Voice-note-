@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
+import '../../Theme/theme_helper.dart';
+
 import 'Home.dart';
 import 'Profile.dart';
 import 'TimeTable.dart';
 import 'RecordScreen.dart';
+import 'Notes.dart';
 
 class Dashboard extends StatefulWidget {
-  const Dashboard({super.key});
+  final String senderName;
+  final String senderRole;
+
+  const Dashboard({
+    super.key,
+    required this.senderName,
+    required this.senderRole,
+  });
 
   @override
   State<Dashboard> createState() => _StudentMainScreenState();
@@ -14,25 +24,34 @@ class Dashboard extends StatefulWidget {
 class _StudentMainScreenState extends State<Dashboard> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    Home(),
-    TimetableScreen(),
-    RecordScreen(),
-    StudentNotesScreen(),
-    ProfileScreen(),
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _pages = [
+      const Home(),
+      const TimetableScreen(),
+      const RecordScreen(),
+      Notes(senderName: widget.senderName, senderRole: widget.senderRole),
+      const ProfileScreen(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0F14),
+      backgroundColor: colors.bg,
       body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        backgroundColor: const Color(0xFF141720),
+        backgroundColor: colors.bg2,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF00E5B0),
-        unselectedItemColor: const Color(0xFF8B92B8),
+        selectedItemColor: colors.teal,
+        unselectedItemColor: colors.text2,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
@@ -70,8 +89,10 @@ class StudentTimetableScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text("Timetable Screen", style: TextStyle(color: Colors.white)),
+    final colors = context.colors;
+
+    return Center(
+      child: Text("Timetable Screen", style: TextStyle(color: colors.text)),
     );
   }
 }
@@ -81,8 +102,10 @@ class StudentRecordScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text("Record Screen", style: TextStyle(color: Colors.white)),
+    final colors = context.colors;
+
+    return Center(
+      child: Text("Record Screen", style: TextStyle(color: colors.text)),
     );
   }
 }
@@ -92,8 +115,10 @@ class StudentNotesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text("Notes Screen", style: TextStyle(color: Colors.white)),
+    final colors = context.colors;
+
+    return Center(
+      child: Text("Notes Screen", style: TextStyle(color: colors.text)),
     );
   }
 }

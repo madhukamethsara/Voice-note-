@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../Theme/theme.dart';
 import '../widgets/commonwidget.dart';
-import '../Services/authservice.dart';
+import 'package:voicenote/Services/authservices.dart';
 import '../Models/AppUser.dart';
+import '../Theme/theme_helper.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _showSnack('Logged in successfully');
 
       if (appUser.role.toLowerCase() == 'student') {
-        context.go('/Student/Dasboard');
+        context.go('/dashboard');
       } else if (appUser.role.toLowerCase() == 'lecturer') {
         context.go('/lecturer-home');
       } else {
@@ -63,16 +63,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppTopBar(title: 'Welcome back', onBack: () => context.pop()),
+      backgroundColor: colors.bg,
+      appBar: AppTopBar(title: 'Welcome back', onBack: () => context.go('/')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
         child: Column(
@@ -97,11 +97,10 @@ class _LoginScreenState extends State<LoginScreen> {
               onTap: _isLoading ? null : _doLogin,
             ),
             const SizedBox(height: 16),
-            const SizedBox(height: 16),
             Center(
               child: Text(
                 '— or —',
-                style: dmStyle(size: 11, color: AppColors.text3),
+                style: TextStyle(color: colors.text3, fontSize: 11),
               ),
             ),
             const SizedBox(height: 10),

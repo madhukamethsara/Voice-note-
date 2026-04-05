@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../Theme/theme.dart';
+import '../Theme/theme_helper.dart';
 import '../widgets/commonwidget.dart';
-import '../Services/AuthService.dart';
+import 'package:voicenote/Services/authservices.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String role;
@@ -83,29 +83,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       _showSnack('Account created successfully');
 
-      if (_isStudent) {
-        context.go('/Student/Dasboard');
-      } else {
-        context.go('/lecturer-home');
-      }
+      context.push('/onboarding');
     } catch (e) {
       if (!mounted) return;
       _showSnack(e.toString().replaceFirst('Exception: ', ''));
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    final colors = context.colors;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: colors.bg2,
+        content: Text(msg, style: TextStyle(color: colors.text)),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: colors.bg,
       appBar: AppTopBar(
         title: _isStudent ? 'Student Sign Up' : 'Lecturer Sign Up',
         onBack: () => context.pop(),
@@ -151,10 +154,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 12),
               Text(
                 'Year of study',
-                style: dmStyle(
-                  size: 11,
-                  weight: FontWeight.w500,
-                  color: AppColors.text2,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: colors.text2,
                 ),
               ),
               const SizedBox(height: 8),
@@ -211,25 +214,27 @@ class _YearPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? AppColors.teal.withOpacity(0.12) : AppColors.bg2,
+          color: selected ? colors.teal.withOpacity(0.12) : colors.bg2,
           border: Border.all(
-            color: selected ? AppColors.teal : AppColors.bg3,
+            color: selected ? colors.teal : colors.bg3,
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label,
-          style: dmStyle(
-            size: 12,
-            weight: FontWeight.w500,
-            color: selected ? AppColors.teal : AppColors.text2,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: selected ? colors.teal : colors.text2,
           ),
         ),
       ),

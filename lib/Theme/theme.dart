@@ -2,93 +2,140 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  // Backgrounds
-  static const bg = Color(0xFF0D0F14);
-  static const bg2 = Color(0xFF141720);
-  static const bg3 = Color(0xFF1C2030);
-  static const bg4 = Color(0xFF232840);
+  final Color bg;
+  final Color bg2;
+  final Color bg3;
+  final Color bg4;
 
-  // Accents
-  static const teal = Color(0xFF00E5B0);
-  static const teal2 = Color(0xFF00B88A);
-  static const coral = Color(0xFFFF6B6B);
-  static const amber = Color(0xFFFFC145);
-  static const purple = Color(0xFFA78BFA);
-  static const blue = Color(0xFF60A5FA);
+  final Color teal;
+  final Color coral;
+  final Color amber;
+  final Color purple;
+  final Color blue;
 
-  // Text
-  static const text = Color(0xFFF0F2FF);
-  static const text2 = Color(0xFF8B92B8);
-  static const text3 = Color(0xFF555E7A);
+  final Color text;
+  final Color text2;
+  final Color text3;
+
+  final Color white;
+  final Color black;
+
+  const AppColors({
+    required this.bg,
+    required this.bg2,
+    required this.bg3,
+    required this.bg4,
+    required this.teal,
+    required this.coral,
+    required this.amber,
+    required this.purple,
+    required this.blue,
+    required this.text,
+    required this.text2,
+    required this.text3,
+    required this.white,
+    required this.black,
+  });
+
+  static const dark = AppColors(
+    bg: Color(0xFF0D0F14),
+    bg2: Color(0xFF141720),
+    bg3: Color(0xFF1C2030),
+    bg4: Color(0xFF232840),
+    teal: Color(0xFF00E5B0),
+    coral: Color(0xFFFF6B6B),
+    amber: Color(0xFFFFC145),
+    purple: Color(0xFFA78BFA),
+    blue: Color(0xFF60A5FA),
+    text: Color(0xFFF0F2FF),
+    text2: Color(0xFF8B92B8),
+    text3: Color(0xFF555E7A),
+    white: Color(0xFFFFFFFF),
+    black: Color(0xFF000000),
+  );
+
+  static const light = AppColors(
+    bg: Color(0xFFF7F9FC),
+    bg2: Color(0xFFFFFFFF),
+    bg3: Color(0xFFF1F5F9),
+    bg4: Color(0xFFD8E0EA),
+    teal: Color(0xFF00B88A),
+    coral: Color(0xFFE85D5D),
+    amber: Color(0xFFE6A700),
+    purple: Color(0xFF8B6EF3),
+    blue: Color(0xFF4F8CFF),
+    text: Color(0xFF0F172A),
+    text2: Color(0xFF475569),
+    text3: Color(0xFF64748B),
+    white: Color(0xFFFFFFFF),
+    black: Color(0xFF000000),
+  );
 }
 
 class AppTheme {
-  static ThemeData get dark => ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: AppColors.bg,
-        colorScheme: const ColorScheme.dark(
-          primary: AppColors.teal,
-          surface: AppColors.bg2,
-        ),
-        textTheme: GoogleFonts.dmSansTextTheme(
-          const TextTheme(
-            bodyLarge: TextStyle(color: AppColors.text),
-            bodyMedium: TextStyle(color: AppColors.text),
-            bodySmall: TextStyle(color: AppColors.text2),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: AppColors.bg3,
-          hintStyle: const TextStyle(color: AppColors.text3, fontSize: 13),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:
-                const BorderSide(color: AppColors.bg4, width: 1.5),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:
-                const BorderSide(color: AppColors.bg4, width: 1.5),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:
-                const BorderSide(color: AppColors.teal, width: 1.5),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.teal,
-            foregroundColor: Colors.black,
-            minimumSize: const Size(double.infinity, 46),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            textStyle: GoogleFonts.syne(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ),
-        useMaterial3: true,
-      );
+  static ThemeData darkTheme = ThemeData(
+    brightness: Brightness.dark,
+    scaffoldBackgroundColor: AppColors.dark.bg,
+    primaryColor: AppColors.dark.teal,
+    colorScheme: ColorScheme.dark(
+      primary: AppColors.dark.teal,
+      secondary: AppColors.dark.amber,
+      surface: AppColors.dark.bg2,
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: AppColors.dark.bg,
+      elevation: 0,
+      iconTheme: IconThemeData(color: AppColors.dark.text),
+      titleTextStyle: GoogleFonts.syne(
+        color: AppColors.dark.text,
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    textTheme: GoogleFonts.dmSansTextTheme().apply(
+      bodyColor: AppColors.dark.text,
+      displayColor: AppColors.dark.text,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColors.dark.bg2,
+      contentTextStyle: GoogleFonts.dmSans(
+        color: AppColors.dark.text,
+        fontSize: 13,
+      ),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+
+  static ThemeData lightTheme = ThemeData(
+    brightness: Brightness.light,
+    scaffoldBackgroundColor: AppColors.light.bg,
+    primaryColor: AppColors.light.teal,
+    colorScheme: ColorScheme.light(
+      primary: AppColors.light.teal,
+      secondary: AppColors.light.amber,
+      surface: AppColors.light.bg2,
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: AppColors.light.bg,
+      elevation: 0,
+      iconTheme: IconThemeData(color: AppColors.light.text),
+      titleTextStyle: GoogleFonts.syne(
+        color: AppColors.light.text,
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    textTheme: GoogleFonts.dmSansTextTheme().apply(
+      bodyColor: AppColors.light.text,
+      displayColor: AppColors.light.text,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColors.light.bg2,
+      contentTextStyle: GoogleFonts.dmSans(
+        color: AppColors.light.text,
+        fontSize: 13,
+      ),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
 }
-
-// Text style helpers
-TextStyle syneStyle({
-  double size = 14,
-  FontWeight weight = FontWeight.w700,
-  Color color = AppColors.text,
-}) =>
-    GoogleFonts.syne(fontSize: size, fontWeight: weight, color: color);
-
-TextStyle dmStyle({
-  double size = 13,
-  FontWeight weight = FontWeight.w400,
-  Color color = AppColors.text,
-}) =>
-    GoogleFonts.dmSans(fontSize: size, fontWeight: weight, color: color);
