@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../Models/Module.dart';
 import '../../Services/ModuleService.dart';
-import '../../Theme/theme.dart';
+import '../../Theme/theme_helper.dart';
 import 'ModuleFileScreen.dart';
 
 class Notes extends StatefulWidget {
-  const Notes({super.key});
+  final String senderName;
+  final String senderRole;
+
+  const Notes({super.key, required this.senderName, required this.senderRole});
 
   @override
   State<Notes> createState() => _NotesState();
@@ -14,43 +17,31 @@ class Notes extends StatefulWidget {
 class _NotesState extends State<Notes> {
   final ModuleService _moduleService = ModuleService();
 
-  final List<Color> _accentColors = const [
-    AppColors.teal,
-    AppColors.purple,
-    AppColors.blue,
-    AppColors.amber,
-    AppColors.coral,
-  ];
-
-  String _formatUpdatedText(DateTime? dateTime) {
-    if (dateTime == null) return 'Updated recently';
-
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 1) {
-      return 'Updated just now';
-    } else if (difference.inHours < 1) {
-      return 'Updated ${difference.inMinutes} min ago';
-    } else if (difference.inDays < 1) {
-      return 'Updated today';
-    } else if (difference.inDays == 1) {
-      return 'Updated yesterday';
-    } else if (difference.inDays < 7) {
-      return 'Updated ${difference.inDays} days ago';
-    } else {
-      return 'Updated this month';
-    }
-  }
-
-  Color _getAccentColor(int index) {
-    return _accentColors[index % _accentColors.length];
+  void _openModuleFiles(BuildContext context, Module module) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ModuleFilesScreen(module: module)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    final accentColors = [
+      colors.teal,
+      colors.purple,
+      colors.blue,
+      colors.amber,
+      colors.coral,
+    ];
+
+    Color getAccentColor(int index) {
+      return accentColors[index % accentColors.length];
+    }
+
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: colors.bg,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -61,8 +52,9 @@ class _NotesState extends State<Notes> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSectionTitle(
-                      title: 'Your Modules',
-                      subtitle: 'Open files by module name',
+                      context,
+                      'Your Modules',
+                      'Open files by module',
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -73,11 +65,11 @@ class _NotesState extends State<Notes> {
               stream: _moduleService.getUserModulesStream(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SliverToBoxAdapter(
+                  return SliverToBoxAdapter(
                     child: Center(
                       child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: CircularProgressIndicator(),
+                        padding: const EdgeInsets.all(24),
+                        child: CircularProgressIndicator(color: colors.teal),
                       ),
                     ),
                   );
@@ -87,7 +79,10 @@ class _NotesState extends State<Notes> {
                   return SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _buildErrorState(snapshot.error.toString()),
+                      child: _buildErrorState(
+                        context,
+                        snapshot.error.toString(),
+                      ),
                     ),
                   );
                 }
@@ -98,7 +93,7 @@ class _NotesState extends State<Notes> {
                   return SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     sliver: SliverToBoxAdapter(
-                      child: _buildEmptyState(),
+                      child: _buildEmptyState(context),
                     ),
                   );
                 }
@@ -109,7 +104,12 @@ class _NotesState extends State<Notes> {
                     itemCount: modules.length,
                     itemBuilder: (context, index) {
                       final module = modules[index];
-                      return _buildModuleCard(module, index);
+                      return _buildModuleCard(
+                        context,
+                        module,
+                        index,
+                        getAccentColor,
+                      );
                     },
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                   ),
@@ -122,55 +122,52 @@ class _NotesState extends State<Notes> {
     );
   }
 
-  Widget _buildSectionTitle({
-    required String title,
-    required String subtitle,
-  }) {
+  Widget _buildSectionTitle(
+    BuildContext context,
+    String title,
+    String subtitle,
+  ) {
+    final colors = context.colors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: AppColors.text,
+          style: TextStyle(
+            color: colors.text,
             fontSize: 17,
             fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            color: AppColors.text2,
-            fontSize: 12,
-          ),
-        ),
+        Text(subtitle, style: TextStyle(color: colors.text2, fontSize: 12)),
       ],
     );
   }
 
-  Widget _buildModuleCard(Module module, int index) {
-    final accentColor = _getAccentColor(index);
+  Widget _buildModuleCard(
+    BuildContext context,
+    Module module,
+    int index,
+    Color Function(int) getAccentColor,
+  ) {
+    final colors = context.colors;
+    final accentColor = getAccentColor(index);
+
     final displayName = module.moduleName.isNotEmpty
         ? module.moduleName
         : module.moduleCode;
 
     return InkWell(
       borderRadius: BorderRadius.circular(22),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ModuleFilesScreen(module: module),
-          ),
-        );
-      },
+      onTap: () => _openModuleFiles(context, module),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.bg2,
+          color: colors.bg2,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.bg4),
+          border: Border.all(color: colors.bg4),
         ),
         child: Row(
           children: [
@@ -178,14 +175,10 @@ class _NotesState extends State<Notes> {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: AppColors.bg3,
+                color: colors.bg3,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                Icons.folder_rounded,
-                color: accentColor,
-                size: 28,
-              ),
+              child: Icon(Icons.folder_rounded, color: accentColor, size: 28),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -194,10 +187,8 @@ class _NotesState extends State<Notes> {
                 children: [
                   Text(
                     displayName,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.text,
+                    style: TextStyle(
+                      color: colors.text,
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
@@ -205,14 +196,11 @@ class _NotesState extends State<Notes> {
                   const SizedBox(height: 4),
                   Text(
                     module.moduleCode,
-                    style: const TextStyle(
-                      color: AppColors.text2,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: colors.text2, fontSize: 12),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${module.totalFiles} files • ${_formatUpdatedText(module.updatedAt)}',
+                    'Open module files',
                     style: TextStyle(
                       color: accentColor,
                       fontSize: 11.5,
@@ -222,89 +210,71 @@ class _NotesState extends State<Notes> {
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.text3,
-            ),
+            Icon(Icons.chevron_right_rounded, color: colors.text3),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.bg2,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.bg4),
-      ),
-      child: const Column(
-        children: [
-          Icon(
-            Icons.folder_off_rounded,
-            size: 42,
-            color: AppColors.text3,
-          ),
-          SizedBox(height: 10),
-          Text(
-            'No modules yet',
-            style: TextStyle(
-              color: AppColors.text,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          SizedBox(height: 6),
-          Text(
-            'Your module files will appear here.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.text2,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildEmptyState(BuildContext context) {
+    final colors = context.colors;
 
-  Widget _buildErrorState(String message) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.bg2,
+        color: colors.bg2,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.bg4),
+        border: Border.all(color: colors.bg4),
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            size: 42,
-            color: AppColors.coral,
-          ),
+          Icon(Icons.folder_off_rounded, size: 42, color: colors.text3),
           const SizedBox(height: 10),
-          const Text(
-            'Failed to load modules',
+          Text(
+            'No modules yet',
             style: TextStyle(
-              color: AppColors.text,
+              color: colors.text,
               fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.text2,
-              fontSize: 12,
+            'Your module files will appear here.',
+            style: TextStyle(color: colors.text2, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, String message) {
+    final colors = context.colors;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colors.bg2,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: colors.bg4),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.error_outline_rounded, size: 42, color: colors.coral),
+          const SizedBox(height: 10),
+          Text(
+            'Failed to load modules',
+            style: TextStyle(
+              color: colors.text,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
             ),
           ),
+          const SizedBox(height: 6),
+          Text(message, style: TextStyle(color: colors.text2, fontSize: 12)),
         ],
       ),
     );

@@ -2,23 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:voicenote/Models/AppUser.dart';
 import 'package:voicenote/Models/TimetableEntry.dart';
-import 'package:voicenote/Services/AuthService.dart';
+import 'package:voicenote/Services/authservices.dart';
 import 'package:voicenote/Services/TimetableService.dart';
 import 'package:voicenote/Screens/Student/ExamFocus.dart';
 import 'package:voicenote/Screens/Student/FlashcardsScreen.dart';
+import 'package:voicenote/Theme/theme_helper.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
-
-  static const Color bg = Color(0xFF0D0F14);
-  static const Color card = Color(0xFF141720);
-  static const Color cardBorder = Color(0xFF232840);
-  static const Color teal = Color(0xFF00E5B0);
-  static const Color amber = Color(0xFFFFC145);
-  static const Color coral = Color(0xFFFF6B6B);
-  static const Color purple = Color(0xFFA78BFA);
-  static const Color text = Color(0xFFF0F2FF);
-  static const Color subText = Color(0xFF8B92B8);
 
   @override
   State<Home> createState() => _HomeState();
@@ -76,23 +67,22 @@ class _HomeState extends State<Home> {
   void _openExamFocus() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ExamFocusScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ExamFocusScreen()),
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     final String displayName = _isLoading
         ? '...'
         : (_appUser?.fullName.isNotEmpty == true
-            ? _appUser!.fullName
-            : 'Student');
+              ? _appUser!.fullName
+              : 'Student');
 
     return Container(
-      color: Home.bg,
+      color: colors.bg,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -101,21 +91,21 @@ class _HomeState extends State<Home> {
             const SizedBox(height: 25),
             Text(
               getGreeting(),
-              style: const TextStyle(color: Home.subText, fontSize: 13),
+              style: TextStyle(color: colors.text2, fontSize: 13),
             ),
             const SizedBox(height: 4),
             RichText(
               text: TextSpan(
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Home.text,
+                  color: colors.text,
                 ),
                 children: [
                   const TextSpan(text: "Hey, "),
                   TextSpan(
                     text: displayName,
-                    style: const TextStyle(color: Home.teal),
+                    style: TextStyle(color: colors.teal),
                   ),
                 ],
               ),
@@ -128,25 +118,25 @@ class _HomeState extends State<Home> {
                   child: _StatCard(
                     value: _isLoading ? "..." : "${_todaySchedule.length}",
                     label: "Modules today",
-                    valueColor: Home.teal,
+                    valueColor: colors.teal,
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: _StatCard(
                     value: "3",
                     label: "Exams coming",
-                    valueColor: Home.amber,
+                    valueColor: colors.amber,
                   ),
                 ),
               ],
             ),
 
             const SizedBox(height: 20),
-            const Text(
+            Text(
               "TODAY'S SCHEDULE",
               style: TextStyle(
-                color: Home.subText,
+                color: colors.text2,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1,
@@ -155,9 +145,9 @@ class _HomeState extends State<Home> {
             const SizedBox(height: 10),
 
             if (_isLoading)
-              const Center(child: CircularProgressIndicator(color: Home.teal))
+              Center(child: CircularProgressIndicator(color: colors.teal))
             else if (_todaySchedule.isEmpty)
-              _buildEmptyScheduleNotice()
+              _buildEmptyScheduleNotice(colors)
             else
               ..._todaySchedule.map(
                 (entry) => Padding(
@@ -170,16 +160,16 @@ class _HomeState extends State<Home> {
                         ? entry.rawText
                         : entry.moduleCode,
                     subtitle: "Week ${entry.week} · ${entry.rawText}",
-                    lineColor: Home.teal,
+                    lineColor: colors.teal,
                   ),
                 ),
               ),
 
             const SizedBox(height: 20),
-            const Text(
+            Text(
               "QUICK ACTIONS",
               style: TextStyle(
-                color: Home.subText,
+                color: colors.text2,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1,
@@ -195,30 +185,30 @@ class _HomeState extends State<Home> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                const _ActionCard(
+                _ActionCard(
                   icon: Icons.mic_rounded,
                   title: "Record",
                   description: "Capture lectures",
-                  iconColor: Home.teal,
+                  iconColor: colors.teal,
                 ),
-                const _ActionCard(
+                _ActionCard(
                   icon: Icons.note_alt_rounded,
                   title: "Notes",
                   description: "View notes",
-                  iconColor: Home.amber,
+                  iconColor: colors.amber,
                 ),
                 _ActionCard(
                   icon: Icons.track_changes_rounded,
                   title: "Exam Focus",
                   description: "Track progress",
-                  iconColor: Home.coral,
+                  iconColor: colors.coral,
                   onTap: _openExamFocus,
                 ),
                 _ActionCard(
                   icon: Icons.style_rounded,
                   title: "Flashcards",
                   description: "Quick revision",
-                  iconColor: Home.purple,
+                  iconColor: colors.purple,
                   onTap: () {
                     Navigator.push(
                       context,
@@ -232,17 +222,17 @@ class _HomeState extends State<Home> {
             ),
 
             const SizedBox(height: 20),
-            const Text(
+            Text(
               "LECTURE RECAP",
               style: TextStyle(
-                color: Home.subText,
+                color: colors.text2,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1,
               ),
             ),
             const SizedBox(height: 10),
-            _buildRecapCard(),
+            _buildRecapCard(colors),
             const SizedBox(height: 20),
           ],
         ),
@@ -250,14 +240,14 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget _buildRecapCard() {
+  Widget _buildRecapCard(dynamic colors) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Home.card,
+        color: colors.bg2,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Home.cardBorder),
+        border: Border.all(color: colors.bg4),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,28 +256,28 @@ class _HomeState extends State<Home> {
             height: 42,
             width: 42,
             decoration: BoxDecoration(
-              color: Home.purple.withOpacity(0.12),
+              color: colors.purple.withOpacity(0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.menu_book_rounded, color: Home.purple),
+            child: Icon(Icons.menu_book_rounded, color: colors.purple),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   "Data Structures",
                   style: TextStyle(
-                    color: Home.text,
+                    color: colors.text,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   "Last week: Trees, BFS/DFS traversal",
-                  style: TextStyle(color: Home.subText, fontSize: 12),
+                  style: TextStyle(color: colors.text2, fontSize: 12),
                 ),
               ],
             ),
@@ -297,18 +287,18 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget _buildEmptyScheduleNotice() {
+  Widget _buildEmptyScheduleNotice(dynamic colors) {
     return Container(
       padding: const EdgeInsets.all(16),
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Home.card,
+        color: colors.bg2,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Home.cardBorder),
+        border: Border.all(color: colors.bg4),
       ),
-      child: const Text(
+      child: Text(
         "No lectures scheduled for today.\nUpload a file or wait for the new week.",
-        style: TextStyle(color: Home.subText, fontSize: 13),
+        style: TextStyle(color: colors.text2, fontSize: 13),
       ),
     );
   }
@@ -327,12 +317,14 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Home.card,
+        color: colors.bg2,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Home.cardBorder),
+        border: Border.all(color: colors.bg4),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -346,10 +338,7 @@ class _StatCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(color: Home.subText, fontSize: 12),
-          ),
+          Text(label, style: TextStyle(color: colors.text2, fontSize: 12)),
         ],
       ),
     );
@@ -371,6 +360,8 @@ class _ScheduleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Row(
       children: [
         SizedBox(
@@ -378,7 +369,7 @@ class _ScheduleTile extends StatelessWidget {
           child: Text(
             time,
             textAlign: TextAlign.right,
-            style: const TextStyle(color: Home.subText, fontSize: 12),
+            style: TextStyle(color: colors.text2, fontSize: 12),
           ),
         ),
         const SizedBox(width: 10),
@@ -386,11 +377,9 @@ class _ScheduleTile extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Home.card,
+              color: colors.bg2,
               borderRadius: BorderRadius.circular(12),
-              border: Border(
-                left: BorderSide(color: lineColor, width: 4),
-              ),
+              border: Border(left: BorderSide(color: lineColor, width: 4)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,8 +388,8 @@ class _ScheduleTile extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Home.text,
+                  style: TextStyle(
+                    color: colors.text,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -410,10 +399,7 @@ class _ScheduleTile extends StatelessWidget {
                   subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Home.subText,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: colors.text2, fontSize: 12),
                 ),
               ],
             ),
@@ -441,8 +427,10 @@ class _ActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Material(
-      color: Home.card,
+      color: colors.bg2,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -451,7 +439,7 @@ class _ActionCard extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Home.cardBorder),
+            border: Border.all(color: colors.bg4),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -461,8 +449,8 @@ class _ActionCard extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: colors.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -472,7 +460,7 @@ class _ActionCard extends StatelessWidget {
                 description,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: colors.text2.withOpacity(0.8),
                   fontSize: 11,
                 ),
               ),
