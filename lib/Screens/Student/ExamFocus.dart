@@ -5,6 +5,7 @@ import 'package:voicenote/Services/QuizService.dart';
 import 'package:voicenote/Services/QuizSummaryService.dart';
 import 'package:voicenote/Services/QuizAttemptService.dart';
 import 'package:voicenote/Services/FlashcardService.dart';
+import '../../Theme/theme_helper.dart';
 
 class ExamFocusScreen extends StatefulWidget {
   const ExamFocusScreen({super.key});
@@ -36,11 +37,7 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
 
   Future<void> _loadModules() async {
     try {
-      print('QUIZ_SCREEN: loading modules from Firestore...');
-
       final modules = await _quizSummaryService.getAvailableModules();
-
-      print('QUIZ_SCREEN: modules loaded = $modules');
 
       if (!mounted) return;
 
@@ -50,10 +47,7 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
         _isLoadingModules = false;
         _errorMessage = modules.isEmpty ? 'No summaries found yet.' : null;
       });
-    } catch (e, st) {
-      print('QUIZ_SCREEN ERROR in _loadModules: $e');
-      print(st);
-
+    } catch (e) {
       if (!mounted) return;
 
       setState(() {
@@ -78,13 +72,9 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
     });
 
     try {
-      print('QUIZ_SCREEN: selected module = $_selectedModule');
-
       final summaries = await _quizSummaryService.getSummariesByModule(
         _selectedModule!,
       );
-
-      print('QUIZ_SCREEN: summaries count = ${summaries.length}');
 
       if (summaries.isEmpty) {
         throw Exception('No summaries found for $_selectedModule');
@@ -94,8 +84,6 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
         moduleName: _selectedModule!,
         summaries: summaries,
       );
-
-      print('QUIZ_SCREEN: combined text length = ${combinedText.length}');
 
       if (combinedText.trim().isEmpty) {
         throw Exception('No valid summary content found.');
@@ -107,18 +95,13 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
         questionCount: 10,
       );
 
-      print('QUIZ_SCREEN: generated questions = ${questions.length}');
-
       if (!mounted) return;
 
       setState(() {
         _questions = questions;
         _isGeneratingQuiz = false;
       });
-    } catch (e, st) {
-      print('QUIZ_SCREEN ERROR in _generateExamPack: $e');
-      print(st);
-
+    } catch (e) {
       if (!mounted) return;
 
       setState(() {
@@ -171,29 +154,23 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
     }
   }
 
-
   int get _score => _questions.where((q) => q.isCorrect == true).length;
 
   @override
   Widget build(BuildContext context) {
-    const bg = Color(0xFF0D0F14);
-    const card = Color(0xFF141720);
-    const border = Color(0xFF232840);
-    const teal = Color(0xFF00E5B0);
-    const text = Color(0xFFF0F2FF);
-    const subText = Color(0xFF8B92B8);
+    final colors = context.colors;
     const red = Colors.redAccent;
 
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: colors.bg,
       appBar: AppBar(
-        backgroundColor: bg,
+        backgroundColor: colors.bg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: text),
-        title: const Text('Exam Focus', style: TextStyle(color: text)),
+        iconTheme: IconThemeData(color: colors.text),
+        title: Text('Exam Focus', style: TextStyle(color: colors.text)),
       ),
       body: _isLoadingModules
-          ? const Center(child: CircularProgressIndicator(color: teal))
+          ? Center(child: CircularProgressIndicator(color: colors.teal))
           : Column(
               children: [
                 Padding(
@@ -201,60 +178,60 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: card,
+                      color: colors.bg2,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: border),
+                      border: Border.all(color: colors.bg4),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Generate Exam Questions',
                           style: TextStyle(
-                            color: text,
+                            color: colors.text,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'Choose a module and create 20 quiz questions from saved Firestore summaries.',
-                          style: TextStyle(color: subText, fontSize: 13),
+                          style: TextStyle(color: colors.text2, fontSize: 13),
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           value: _selectedModule,
-                          dropdownColor: card,
+                          dropdownColor: colors.bg2,
                           decoration: InputDecoration(
                             labelText: 'Select Module',
-                            labelStyle: const TextStyle(color: subText),
+                            labelStyle: TextStyle(color: colors.text2),
                             filled: true,
-                            fillColor: bg,
+                            fillColor: colors.bg,
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: border),
+                              borderSide: BorderSide(color: colors.bg4),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: teal),
+                              borderSide: BorderSide(color: colors.teal),
                             ),
                           ),
-                          style: const TextStyle(color: text),
-                          iconEnabledColor: text,
+                          style: TextStyle(color: colors.text),
+                          iconEnabledColor: colors.text,
                           items: _modules
                               .map(
                                 (module) => DropdownMenuItem<String>(
                                   value: module,
                                   child: Text(
                                     module,
-                                    style: const TextStyle(color: text),
+                                    style: TextStyle(color: colors.text),
                                   ),
                                 ),
                               )
                               .toList(),
-                          onChanged: (value) {
+                          onChanged: (module) {
                             setState(() {
-                              _selectedModule = value;
+                              _selectedModule = module;
                             });
                           },
                         ),
@@ -266,20 +243,20 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                                 ? null
                                 : _generateExamPack,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: teal,
-                              foregroundColor: Colors.black,
+                              backgroundColor: colors.teal,
+                              foregroundColor: colors.black,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                             child: _isGeneratingQuiz
-                                ? const SizedBox(
+                                ? SizedBox(
                                     height: 20,
                                     width: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2.5,
-                                      color: Colors.black,
+                                      color: colors.black,
                                     ),
                                   )
                                 : const Text(
@@ -307,10 +284,10 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                 ),
                 Expanded(
                   child: _questions.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
                             'No quiz generated yet.',
-                            style: TextStyle(color: subText, fontSize: 14),
+                            style: TextStyle(color: colors.text2, fontSize: 14),
                           ),
                         )
                       : ListView.builder(
@@ -323,17 +300,17 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                               margin: const EdgeInsets.only(bottom: 16),
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: card,
+                                color: colors.bg2,
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: border),
+                                border: Border.all(color: colors.bg4),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     '${index + 1}. ${q.question}',
-                                    style: const TextStyle(
-                                      color: text,
+                                    style: TextStyle(
+                                      color: colors.text,
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -343,16 +320,16 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                                     (option) => RadioListTile<String>(
                                       value: option,
                                       groupValue: q.selectedAnswer,
-                                      onChanged: (value) {
+                                      onChanged: (selectedOption) {
                                         setState(() {
-                                          q.selectedAnswer = value;
+                                          q.selectedAnswer = selectedOption;
                                         });
                                       },
                                       contentPadding: EdgeInsets.zero,
-                                      activeColor: teal,
+                                      activeColor: colors.teal,
                                       title: Text(
                                         option,
-                                        style: const TextStyle(color: text),
+                                        style: TextStyle(color: colors.text),
                                       ),
                                     ),
                                   ),
@@ -370,12 +347,12 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                                     const SizedBox(height: 4),
                                     Text(
                                       'Correct Answer: ${q.correctAnswer}',
-                                      style: const TextStyle(color: subText),
+                                      style: TextStyle(color: colors.text2),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       'Explanation: ${q.explanation}',
-                                      style: const TextStyle(color: subText),
+                                      style: TextStyle(color: colors.text2),
                                     ),
                                   ],
                                 ],
@@ -396,8 +373,8 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                               alignment: Alignment.centerLeft,
                               child: Text(
                                 'Score: $_score / ${_questions.length}',
-                                style: const TextStyle(
-                                  color: teal,
+                                style: TextStyle(
+                                  color: colors.teal,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
                                 ),
@@ -409,8 +386,8 @@ class _ExamFocusScreenState extends State<ExamFocusScreen> {
                           child: ElevatedButton(
                             onPressed: _submitQuiz,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: teal,
-                              foregroundColor: Colors.black,
+                              backgroundColor: colors.teal,
+                              foregroundColor: colors.black,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),

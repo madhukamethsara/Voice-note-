@@ -10,33 +10,18 @@ import '../../Models/NoteFileItem.dart';
 import '../../Services/ModuleService.dart';
 import '../../Services/NoteFile.dart';
 import '../../Services/RecordingFirestore.dart';
+import '../../Theme/theme_helper.dart';
 
 class RecordingDetailScreen extends StatefulWidget {
   final RecordingItem recording;
 
-  const RecordingDetailScreen({
-    super.key,
-    required this.recording,
-  });
+  const RecordingDetailScreen({super.key, required this.recording});
 
   @override
   State<RecordingDetailScreen> createState() => _RecordingDetailScreenState();
 }
 
 class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
-  static const Color bg = Color(0xFF0D0F14);
-  static const Color bg2 = Color(0xFF141720);
-  static const Color bg3 = Color(0xFF1C2030);
-  static const Color bg4 = Color(0xFF232840);
-
-  static const Color teal = Color(0xFF00E5B0);
-  static const Color coral = Color(0xFFFF6B6B);
-  static const Color amber = Color(0xFFFFC145);
-  static const Color purple = Color(0xFFA78BFA);
-
-  static const Color text = Color(0xFFF0F2FF);
-  static const Color text2 = Color(0xFF8B92B8);
-
   late final AudioPlayer _audioPlayer;
 
   final ModuleService _moduleService = ModuleService();
@@ -86,17 +71,19 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
   }
 
   Future<void> _togglePlayback() async {
+    final colors = context.colors;
+
     try {
       final file = File(widget.recording.path);
 
       if (!await file.exists()) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: bg3,
+            backgroundColor: colors.bg3,
             behavior: SnackBarBehavior.floating,
             content: Text(
               'Audio file not found',
-              style: GoogleFonts.dmSans(color: text),
+              style: GoogleFonts.dmSans(color: colors.text),
             ),
           ),
         );
@@ -113,11 +100,11 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: bg3,
+          backgroundColor: colors.bg3,
           behavior: SnackBarBehavior.floating,
           content: Text(
             'Playback failed: $e',
-            style: GoogleFonts.dmSans(color: text),
+            style: GoogleFonts.dmSans(color: colors.text),
           ),
         ),
       );
@@ -125,6 +112,8 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
   }
 
   Future<void> _showMoveToModuleSheet() async {
+    final colors = context.colors;
+
     try {
       final modules = await _moduleService.getUserModules();
 
@@ -133,11 +122,11 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       if (modules.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: bg3,
+            backgroundColor: colors.bg3,
             behavior: SnackBarBehavior.floating,
             content: Text(
               'No modules found',
-              style: GoogleFonts.dmSans(color: text),
+              style: GoogleFonts.dmSans(color: colors.text),
             ),
           ),
         );
@@ -146,11 +135,13 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
       showModalBottomSheet(
         context: context,
-        backgroundColor: bg2,
+        backgroundColor: colors.bg2,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         builder: (sheetContext) {
+          final sheetColors = sheetContext.colors;
+
           return Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
             child: Column(
@@ -160,7 +151,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                 Text(
                   'Move to Module',
                   style: GoogleFonts.syne(
-                    color: text,
+                    color: sheetColors.text,
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                   ),
@@ -169,7 +160,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                 Text(
                   'Select a module for this recording',
                   style: GoogleFonts.dmSans(
-                    color: text2,
+                    color: sheetColors.text2,
                     fontSize: 12,
                   ),
                 ),
@@ -177,13 +168,16 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                 ...modules.map(
                   (module) => ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.folder_rounded, color: teal),
+                    leading: Icon(
+                      Icons.folder_rounded,
+                      color: sheetColors.teal,
+                    ),
                     title: Text(
                       module.moduleName.isNotEmpty
                           ? module.moduleName
                           : module.moduleCode,
                       style: GoogleFonts.dmSans(
-                        color: text,
+                        color: sheetColors.text,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -191,7 +185,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                     subtitle: Text(
                       module.moduleCode,
                       style: GoogleFonts.dmSans(
-                        color: text2,
+                        color: sheetColors.text2,
                         fontSize: 12,
                       ),
                     ),
@@ -211,11 +205,11 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: bg3,
+          backgroundColor: colors.bg3,
           behavior: SnackBarBehavior.floating,
           content: Text(
             'Failed to load modules: $e',
-            style: GoogleFonts.dmSans(color: text),
+            style: GoogleFonts.dmSans(color: colors.text),
           ),
         ),
       );
@@ -223,6 +217,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
   }
 
   Future<void> _moveRecordingToModule(Module module) async {
+    final colors = context.colors;
     final recording = widget.recording;
 
     final noteFile = NoteFileItem(
@@ -249,11 +244,11 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: bg3,
+          backgroundColor: colors.bg3,
           behavior: SnackBarBehavior.floating,
           content: Text(
             'Moved to ${module.moduleCode}',
-            style: GoogleFonts.dmSans(color: text),
+            style: GoogleFonts.dmSans(color: colors.text),
           ),
         ),
       );
@@ -262,11 +257,11 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: bg3,
+          backgroundColor: colors.bg3,
           behavior: SnackBarBehavior.floating,
           content: Text(
             'Failed: $e',
-            style: GoogleFonts.dmSans(color: text),
+            style: GoogleFonts.dmSans(color: colors.text),
           ),
         ),
       );
@@ -274,6 +269,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
   }
 
   Widget _buildTab(String title, int index) {
+    final colors = context.colors;
     final isSelected = _selectedTab == index;
 
     return Expanded(
@@ -288,7 +284,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: isSelected ? teal : bg4,
+                color: isSelected ? colors.teal : colors.bg4,
                 width: 2,
               ),
             ),
@@ -297,7 +293,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
             title,
             textAlign: TextAlign.center,
             style: GoogleFonts.dmSans(
-              color: isSelected ? text : text2,
+              color: isSelected ? colors.text : colors.text2,
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
@@ -308,25 +304,27 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
   }
 
   Widget _buildContentBox() {
+    final colors = context.colors;
+
     final content = _selectedTab == 0
         ? ((widget.recording.transcript?.trim().isNotEmpty ?? false)
-            ? widget.recording.transcript!
-            : 'No transcript available yet.')
+              ? widget.recording.transcript!
+              : 'No transcript available yet.')
         : _summaryText;
 
     final title = _selectedTab == 0 ? 'Transcript' : 'Summary';
     final icon = _selectedTab == 0
         ? Icons.description_rounded
         : Icons.auto_awesome_rounded;
-    final iconColor = _selectedTab == 0 ? purple : amber;
+    final iconColor = _selectedTab == 0 ? colors.purple : colors.amber;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: bg2,
+        color: colors.bg2,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: bg4),
+        border: Border.all(color: colors.bg4),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,7 +336,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
               Text(
                 title,
                 style: GoogleFonts.syne(
-                  color: text,
+                  color: colors.text,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
@@ -349,7 +347,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
           Text(
             content,
             style: GoogleFonts.dmSans(
-              color: text2,
+              color: colors.text2,
               fontSize: 13,
               height: 1.6,
             ),
@@ -361,21 +359,22 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final fileExists = File(widget.recording.path).existsSync();
 
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: colors.bg,
       appBar: AppBar(
-        backgroundColor: bg,
+        backgroundColor: colors.bg,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.chevron_left_rounded, color: text),
+          icon: Icon(Icons.chevron_left_rounded, color: colors.text),
         ),
         title: Text(
           widget.recording.module,
           style: GoogleFonts.syne(
-            color: text,
+            color: colors.text,
             fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
@@ -383,7 +382,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
         actions: [
           IconButton(
             onPressed: _showMoveToModuleSheet,
-            icon: const Icon(Icons.more_horiz_rounded, color: teal),
+            icon: Icon(Icons.more_horiz_rounded, color: colors.teal),
           ),
         ],
       ),
@@ -396,9 +395,9 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: bg2,
+                color: colors.bg2,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: bg4),
+                border: Border.all(color: colors.bg4),
               ),
               child: Row(
                 children: [
@@ -408,14 +407,14 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: bg3,
+                        color: colors.bg3,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(
                         _isPlaying
                             ? Icons.pause_rounded
                             : Icons.play_arrow_rounded,
-                        color: teal,
+                        color: colors.teal,
                         size: 28,
                       ),
                     ),
@@ -428,7 +427,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                         Text(
                           'Recording File',
                           style: GoogleFonts.syne(
-                            color: text,
+                            color: colors.text,
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                           ),
@@ -437,7 +436,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                         Text(
                           '${_formatDuration(widget.recording.durationSeconds)} • ${_formatDate(widget.recording.createdAt)}',
                           style: GoogleFonts.dmSans(
-                            color: text2,
+                            color: colors.text2,
                             fontSize: 12,
                           ),
                         ),
@@ -445,7 +444,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                         Text(
                           fileExists ? 'Saved locally' : 'File not found',
                           style: GoogleFonts.dmSans(
-                            color: fileExists ? teal : coral,
+                            color: fileExists ? colors.teal : colors.coral,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w600,
                           ),

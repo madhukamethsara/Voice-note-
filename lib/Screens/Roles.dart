@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../Theme/theme.dart';
+import '../Theme/theme_helper.dart';
 import '../widgets/commonwidget.dart';
 
 class RoleSelectScreen extends StatefulWidget {
@@ -12,7 +12,7 @@ class RoleSelectScreen extends StatefulWidget {
 
 class _RoleSelectScreenState extends State<RoleSelectScreen>
     with SingleTickerProviderStateMixin {
-  String? _selectedRole; // 'student' | 'lecturer' | null
+  String? _selectedRole;
   late AnimationController _ctrl;
   late Animation<double> _fade;
 
@@ -20,7 +20,9 @@ class _RoleSelectScreenState extends State<RoleSelectScreen>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400));
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _ctrl.forward();
   }
@@ -42,20 +44,21 @@ class _RoleSelectScreenState extends State<RoleSelectScreen>
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: AppColors.bg,
-  appBar: AppBar(
-    backgroundColor: AppColors.bg,
-    elevation: 0,
-    centerTitle: true,
-    leading: IconButton(
-      icon: const Icon(Icons.arrow_back),
-      color: AppColors.text, // match your theme
-      onPressed: () {
-        context.go('/');
-      },
-    ),
-  ),
+      backgroundColor: colors.bg,
+      appBar: AppBar(
+        backgroundColor: colors.bg,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: colors.text),
+          onPressed: () {
+            context.go('/');
+          },
+        ),
+      ),
       body: SafeArea(
         child: FadeTransition(
           opacity: _fade,
@@ -64,20 +67,22 @@ class _RoleSelectScreenState extends State<RoleSelectScreen>
             child: Column(
               children: [
                 const SizedBox(height: 24),
-
-                // Title
-                Text('Who are you?',
-                    style: syneStyle(size: 24, weight: FontWeight.w700),
-                    textAlign: TextAlign.center),
+                Text(
+                  'Who are you?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: colors.text,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Text(
                   'Choose your role to get started',
-                  style: dmStyle(size: 13, color: AppColors.text2),
                   textAlign: TextAlign.center,
+                  style: TextStyle(color: colors.text2, fontSize: 13),
                 ),
                 const SizedBox(height: 32),
-
-                // Role cards
                 _RoleCard(
                   title: 'Student',
                   subtitle:
@@ -93,9 +98,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen>
                   selected: _selectedRole == 'lecturer',
                   onTap: () => _select('lecturer'),
                 ),
-
                 const Spacer(),
-
                 PrimaryButton(
                   label: 'Continue',
                   enabled: _selectedRole != null,
@@ -111,16 +114,13 @@ class _RoleSelectScreenState extends State<RoleSelectScreen>
   }
 }
 
-// Cards
 class _RoleCard extends StatelessWidget {
-
   final String title;
   final String subtitle;
   final bool selected;
   final VoidCallback onTap;
 
   const _RoleCard({
-   
     required this.title,
     required this.subtitle,
     required this.selected,
@@ -129,6 +129,8 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -137,11 +139,9 @@ class _RoleCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: selected
-              ? AppColors.teal.withOpacity(0.06)
-              : AppColors.bg2,
+          color: selected ? colors.teal.withOpacity(0.06) : colors.bg2,
           border: Border.all(
-            color: selected ? AppColors.teal : AppColors.bg3,
+            color: selected ? colors.teal : colors.bg3,
             width: 2,
           ),
           borderRadius: BorderRadius.circular(14),
@@ -149,18 +149,23 @@ class _RoleCard extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 8),
-            Text(title,
-                style: syneStyle(size: 15, weight: FontWeight.w700)),
+            Text(
+              title,
+              style: TextStyle(
+                color: colors.text,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: dmStyle(size: 12, color: AppColors.text2),
               textAlign: TextAlign.center,
+              style: TextStyle(color: colors.text2, fontSize: 12),
             ),
           ],
         ),
       ),
-      
     );
-  }  
+  }
 }

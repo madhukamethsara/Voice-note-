@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../Theme/theme.dart';
+import '../Theme/theme_helper.dart';
 import '../widgets/commonwidget.dart';
-import '../Services/authservice.dart';
-import '../Models/AppUser.dart';
+import 'package:voicenote/Services/authservices.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String role;
@@ -28,7 +27,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final List<String> _years = ['Year 1', 'Year 2', 'Year 3', 'Year 4'];
 
   bool _isLoading = false;
-  final Map<String, String?> _errors = {};
 
   bool get _isStudent => widget.role == 'student';
 
@@ -43,132 +41,74 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _setFieldError(String field, String msg) {
-    setState(() {
-      _errors[field] = msg;
-      _isLoading = false;
-    });
-  }
-
-  void _clearErrors() {
-    setState(() {
-      _errors.clear();
-    });
-  }
-
-  void _routeUser(AppUser appUser, String successMsg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(successMsg)),
-    );
-
-    if (appUser.role.toLowerCase() == 'student') {
-      context.go('/Student/Dasboard');
-    } else {
-      context.go('/Lecturer/Dashboard');
-    }
-  }
-
   Future<void> _doRegister() async {
-    _clearErrors();
-
-    final name = _nameCtrl.text.trim();
-    final email = _emailCtrl.text.trim();
-    final pass = _passCtrl.text.trim();
-    final uni = _uniCtrl.text.trim();
-    final degree = _degreeCtrl.text.trim();
-    final dept = _deptCtrl.text.trim();
-
-    if (name.isEmpty) return _setFieldError('name', 'Name is required');
-    if (email.isEmpty) return _setFieldError('email', 'Email is required');
-    if (pass.isEmpty) return _setFieldError('pass', 'Password is required');
-    if (uni.isEmpty) return _setFieldError('uni', 'University is required');
-
-    if (_isStudent && degree.isEmpty) {
-      return _setFieldError('degree', 'Degree is required');
-    }
-    if (!_isStudent && dept.isEmpty) {
-      return _setFieldError('dept', 'Department is required');
+    if (_nameCtrl.text.trim().isEmpty ||
+        _emailCtrl.text.trim().isEmpty ||
+        _passCtrl.text.trim().isEmpty ||
+        _uniCtrl.text.trim().isEmpty) {
+      _showSnack('Please fill all required fields');
+      return;
     }
 
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(email)) {
-      return _setFieldError('email', 'Invalid email format');
+    if (_isStudent && _degreeCtrl.text.trim().isEmpty) {
+      _showSnack('Please enter your degree');
+      return;
     }
 
-    if (pass.length < 6) return _setFieldError('pass', 'Min. 6 characters');
-    if (!pass.contains(RegExp(r'[A-Z]'))) return _setFieldError('pass', 'Needs an uppercase letter');
-    if (!pass.contains(RegExp(r'[a-z]'))) return _setFieldError('pass', 'Needs a lowercase letter');
-    if (!pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>_]'))) return _setFieldError('pass', 'Needs a special character');
+    if (!_isStudent && _deptCtrl.text.trim().isEmpty) {
+      _showSnack('Please enter your department');
+      return;
+    }
+
+    if (_passCtrl.text.trim().length < 6) {
+      _showSnack('Password must be at least 6 characters');
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
-      final AppUser appUser = await _authService.registerUser(
-        fullName: name,
-        email: email,
-        password: pass,
+      await _authService.registerUser(
+        fullName: _nameCtrl.text.trim(),
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text.trim(),
         role: widget.role,
-        university: uni,
-        degree: _isStudent ? degree : null,
+        university: _uniCtrl.text.trim(),
+        degree: _isStudent ? _degreeCtrl.text.trim() : null,
         yearOfStudy: _isStudent ? _selectedYear : null,
-        department: _isStudent ? null : dept,
+        department: _isStudent ? null : _deptCtrl.text.trim(),
       );
 
       if (!mounted) return;
-      _routeUser(appUser, 'Account created successfully');
 
+      _showSnack('Account created successfully');
+
+      context.push('/onboarding');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      _showSnack(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  
-  Future<void> _doGoogleRegister() async {
-    setState(() => _isLoading = true);
-    
-    try {
-      
-      final AppUser appUser = await _authService.signInWithGoogle(defaultRole: widget.role);
-      
-      if (!mounted) return;
-      _routeUser(appUser, 'Signed in with Google successfully');
-      
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
+  void _showSnack(String msg) {
+    final colors = context.colors;
 
-  Widget _buildFieldLabel(String label, String? error) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: dmStyle(size: 11, weight: FontWeight.w500, color: AppColors.text2),
-        ),
-        if (error != null)
-          Text(
-            error,
-            style: dmStyle(size: 10, weight: FontWeight.bold, color: Colors.redAccent),
-          ),
-      ],
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: colors.bg2,
+        content: Text(msg, style: TextStyle(color: colors.text)),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: colors.bg,
       appBar: AppTopBar(
         title: _isStudent ? 'Student Sign Up' : 'Lecturer Sign Up',
         onBack: () => context.pop(),
@@ -178,114 +118,81 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildFieldLabel('Full name', _errors['name']),
-            const SizedBox(height: 4),
             LabeledField(
-              label: '', 
+              label: 'Full name',
               hint: 'e.g. Ashan Perera',
               controller: _nameCtrl,
-              onChanged: (_) => setState(() => _errors['name'] = null),
             ),
             const SizedBox(height: 12),
-
-            _buildFieldLabel('Email', _errors['email']),
-            const SizedBox(height: 4),
             LabeledField(
-              label: '',
+              label: 'Email',
               hint: 'you@university.edu',
               keyboardType: TextInputType.emailAddress,
               controller: _emailCtrl,
-              onChanged: (_) => setState(() => _errors['email'] = null),
             ),
             const SizedBox(height: 12),
-
-            _buildFieldLabel('Password', _errors['pass']),
-            const SizedBox(height: 4),
             LabeledField(
-              label: '',
-              hint: 'Min. 6 chars, A-z, @',
+              label: 'Password',
+              hint: 'Min. 6 characters',
               obscure: true,
               controller: _passCtrl,
-              onChanged: (_) => setState(() => _errors['pass'] = null),
             ),
             const SizedBox(height: 12),
-
-            _buildFieldLabel('University', _errors['uni']),
-            const SizedBox(height: 4),
             LabeledField(
-              label: '',
+              label: 'University',
               hint: 'University of Colombo',
               controller: _uniCtrl,
-              onChanged: (_) => setState(() => _errors['uni'] = null),
             ),
             const SizedBox(height: 12),
 
             if (_isStudent) ...[
-              _buildFieldLabel('Degree', _errors['degree']),
-              const SizedBox(height: 4),
               LabeledField(
-                label: '',
+                label: 'Degree',
                 hint: 'Software Engineering',
                 controller: _degreeCtrl,
-                onChanged: (_) => setState(() => _errors['degree'] = null),
               ),
               const SizedBox(height: 12),
               Text(
                 'Year of study',
-                style: dmStyle(size: 11, weight: FontWeight.w500, color: AppColors.text2),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: colors.text2,
+                ),
               ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: _years.map((y) => _YearPill(
-                  label: y,
-                  selected: _selectedYear == y,
-                  onTap: () => setState(() => _selectedYear = y),
-                )).toList(),
+                children: _years
+                    .map(
+                      (y) => _YearPill(
+                        label: y,
+                        selected: _selectedYear == y,
+                        onTap: () => setState(() => _selectedYear = y),
+                      ),
+                    )
+                    .toList(),
               ),
             ],
 
-            if (!_isStudent) ...[
-              _buildFieldLabel('Department', _errors['dept']),
-              const SizedBox(height: 4),
+            if (!_isStudent)
               LabeledField(
-                label: '',
+                label: 'Department',
                 hint: 'e.g. Computer Science',
                 controller: _deptCtrl,
-                onChanged: (_) => setState(() => _errors['dept'] = null),
               ),
-            ],
 
             const SizedBox(height: 24),
+
             PrimaryButton(
-              label: _isLoading ? 'Please wait...' : 'Create Account',
+              label: _isLoading ? 'Creating...' : 'Create Account',
               onTap: _isLoading ? () {} : _doRegister,
             ),
-            const SizedBox(height: 16),
-            
-            
-            Center(
-              child: Text(
-                '— or —',
-                style: dmStyle(size: 11, color: AppColors.text3),
-              ),
-            ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             OutlineButton2(
-              label: '🔵  Continue with Google',
-              onTap: _isLoading ? () {} : _doGoogleRegister, 
-            ),
-            
-            const SizedBox(height: 16),
-            Center(
-              child: GestureDetector(
-                onTap: () => context.push('/Login'),
-                child: Text(
-                  'Already have an account? Log in',
-                  style: dmStyle(size: 12, color: AppColors.teal, weight: FontWeight.w600),
-                ),
-              ),
+              label: 'Already have an account? Log in',
+              onTap: () => context.push('/login'),
             ),
           ],
         ),
@@ -299,29 +206,35 @@ class _YearPill extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _YearPill({required this.label, required this.selected, required this.onTap});
+  const _YearPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? AppColors.teal.withOpacity(0.12) : AppColors.bg2,
+          color: selected ? colors.teal.withOpacity(0.12) : colors.bg2,
           border: Border.all(
-            color: selected ? AppColors.teal : AppColors.bg3,
+            color: selected ? colors.teal : colors.bg3,
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label,
-          style: dmStyle(
-            size: 12,
-            weight: FontWeight.w500,
-            color: selected ? AppColors.teal : AppColors.text2,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: selected ? colors.teal : colors.text2,
           ),
         ),
       ),
