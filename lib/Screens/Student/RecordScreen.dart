@@ -698,6 +698,9 @@ class _RecordScreenState extends State<RecordScreen>
                   style: TextStyle(fontSize: 32),
                 ),
               ),
+              child: const Center(
+                child: Text('🎙️', style: TextStyle(fontSize: 32)),
+              ),
             ),
           ),
         );

@@ -15,10 +15,7 @@ import '../../Theme/theme_helper.dart';
 class RecordingDetailScreen extends StatefulWidget {
   final RecordingItem recording;
 
-  const RecordingDetailScreen({
-    super.key,
-    required this.recording,
-  });
+  const RecordingDetailScreen({super.key, required this.recording});
 
   @override
   State<RecordingDetailScreen> createState() => _RecordingDetailScreenState();

@@ -27,8 +27,13 @@ class _NotesState extends State<Notes> {
   String _formatUpdatedText(DateTime? dateTime) {
     if (dateTime == null) return 'No updates';
 
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
+    final accentColors = [
+      colors.teal,
+      colors.purple,
+      colors.blue,
+      colors.amber,
+      colors.coral,
+    ];
 
     if (difference.inMinutes < 1) return 'Updated just now';
     if (difference.inMinutes < 60) {
@@ -229,11 +234,7 @@ class _NotesState extends State<Notes> {
                 color: colors.bg3,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                Icons.folder_rounded,
-                color: accentColor,
-                size: 28,
-              ),
+              child: Icon(Icons.folder_rounded, color: accentColor, size: 28),
             ),
             const SizedBox(width: 12),
             Expanded(

@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-
 import '../../Models/AppUser.dart';
-import '../../Services/auth/authservice.dart';
+import '../../Services/AuthService.dart';
 import '../../Services/UserService.dart';
-import '../../Theme/theme_helper.dart';
-import '../../Theme/theme_notifier.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+class LecturerProfileScreen extends StatefulWidget {
+  const LecturerProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _StudentProfileScreenState();
+  State<LecturerProfileScreen> createState() => _LecturerProfileScreenState();
 }
 
-class _StudentProfileScreenState extends State<ProfileScreen> {
+class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
   final AuthService _authService = AuthService();
   final UserService _userService = UserService();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -25,8 +21,6 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
 
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _universityController = TextEditingController();
-  final TextEditingController _degreeController = TextEditingController();
-  final TextEditingController _yearController = TextEditingController();
   final TextEditingController _departmentController = TextEditingController();
 
   String? _loadedUserId;
@@ -35,8 +29,6 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
   void dispose() {
     _fullNameController.dispose();
     _universityController.dispose();
-    _degreeController.dispose();
-    _yearController.dispose();
     _departmentController.dispose();
     super.dispose();
   }
@@ -46,121 +38,124 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
 
     _fullNameController.text = user.fullName;
     _universityController.text = user.university;
-    _degreeController.text = user.degree ?? '';
-    _yearController.text = user.yearOfStudy ?? '';
     _departmentController.text = user.department ?? '';
     _loadedUserId = user.uid;
   }
 
   void _startEditing(AppUser user) {
-    _fillControllers(user);
-    setState(() => _isEditing = true);
+    _fullNameController.text = user.fullName;
+    _universityController.text = user.university;
+    _departmentController.text = user.department ?? '';
+
+    setState(() {
+      _isEditing = true;
+    });
   }
 
   void _cancelEditing(AppUser user) {
-    _fillControllers(user);
-    setState(() => _isEditing = false);
+    _fullNameController.text = user.fullName;
+    _universityController.text = user.university;
+    _departmentController.text = user.department ?? '';
+
+    setState(() {
+      _isEditing = false;
+    });
   }
 
   Future<void> _saveChanges(AppUser user) async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isSaving = true);
+    setState(() {
+      _isSaving = true;
+    });
 
     try {
       await _userService.updateUserProfile(
         uid: user.uid,
         fullName: _fullNameController.text.trim(),
         university: _universityController.text.trim(),
-        degree: _degreeController.text.trim(),
-        yearOfStudy: _yearController.text.trim(),
         department: _departmentController.text.trim(),
+        degree: '', 
+        yearOfStudy: '', 
       );
 
       if (!mounted) return;
 
-      setState(() => _isEditing = false);
+      setState(() {
+        _isEditing = false;
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
+        const SnackBar(
+          content: Text('Profile updated successfully'),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Update failed: $e')),
+        SnackBar(
+          content: Text('Update failed: $e'),
+        ),
       );
     } finally {
       if (mounted) {
-        setState(() => _isSaving = false);
+        setState(() {
+          _isSaving = false;
+        });
       }
     }
   }
 
-  InputDecoration _inputDecoration(String label, BuildContext context) {
-    final colors = context.colors;
-
+  InputDecoration _inputDecoration(String label) {
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(color: colors.text2),
-      filled: true,
-      fillColor: colors.bg,
+      labelStyle: const TextStyle(color: Color(0xFF8B92B8)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colors.bg4),
+        borderSide: const BorderSide(color: Color(0xFF232840)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colors.teal),
+        borderSide: const BorderSide(color: Color(0xFF00E5B0)),
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 
-  Widget _buildProfileRow(BuildContext context, String title, String value) {
-    final colors = context.colors;
-
+  Widget _buildProfileRow(String title, String value) {
     return ListTile(
-      contentPadding: EdgeInsets.zero,
       title: Text(
         title,
-        style: TextStyle(
-          color: colors.text2,
+        style: const TextStyle(
+          color: Color(0xFF8B92B8),
           fontSize: 13,
         ),
       ),
-      trailing: Flexible(
-        child: Text(
-          value,
-          textAlign: TextAlign.right,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: colors.text,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
+      trailing: Text(
+        value,
+        style: const TextStyle(
+          color: Color(0xFFF0F2FF),
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
   Widget _buildEditField({
-    required BuildContext context,
     required String label,
     required TextEditingController controller,
     String? Function(String?)? validator,
   }) {
-    final colors = context.colors;
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: TextFormField(
         controller: controller,
-        style: TextStyle(color: colors.text),
-        decoration: _inputDecoration(label, context),
+        style: const TextStyle(color: Colors.white),
+        decoration: _inputDecoration(label),
         validator: validator,
       ),
     );
@@ -168,18 +163,12 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    //final themeNotifier = context.watch<ThemeNotifier>();
     final currentUser = _authService.currentFirebaseUser;
 
     if (currentUser == null) {
-      return Scaffold(
-        backgroundColor: colors.bg,
+      return const Scaffold(
         body: Center(
-          child: Text(
-            'No logged-in user found',
-            style: TextStyle(color: colors.text),
-          ),
+          child: Text('No logged-in user found'),
         ),
       );
     }
@@ -187,21 +176,16 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
     return StreamBuilder<AppUser?>(
       stream: _userService.streamUserByUid(currentUser.uid),
       builder: (context, snapshot) {
-        final colors = context.colors;
-        final themeNotifier = context.watch<ThemeNotifier>();
-
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            backgroundColor: colors.bg,
-            body: Center(
-              child: CircularProgressIndicator(color: colors.teal),
-            ),
+          return const Scaffold(
+            backgroundColor: Color(0xFF0D0F14),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
         if (snapshot.hasError) {
           return Scaffold(
-            backgroundColor: colors.bg,
+            backgroundColor: const Color(0xFF0D0F14),
             body: Center(
               child: Text(
                 snapshot.error.toString(),
@@ -214,12 +198,12 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
         final user = snapshot.data;
 
         if (user == null) {
-          return Scaffold(
-            backgroundColor: colors.bg,
+          return const Scaffold(
+            backgroundColor: Color(0xFF0D0F14),
             body: Center(
               child: Text(
                 'User data not found',
-                style: TextStyle(color: colors.text),
+                style: TextStyle(color: Colors.white),
               ),
             ),
           );
@@ -230,7 +214,7 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
         }
 
         return Scaffold(
-          backgroundColor: colors.bg,
+          backgroundColor: const Color(0xFF0D0F14),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Form(
@@ -239,13 +223,13 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
                 children: [
                   const SizedBox(height: 10),
 
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 42,
-                    backgroundColor: colors.bg4,
+                    backgroundColor: Color(0xFF232840),
                     child: Icon(
                       Icons.person,
                       size: 42,
-                      color: colors.teal,
+                      color: Color(0xFF00E5B0),
                     ),
                   ),
 
@@ -253,19 +237,17 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
 
                   Text(
                     user.fullName,
-                    style: TextStyle(
-                      color: colors.text,
+                    style: const TextStyle(
+                      color: Color(0xFFF0F2FF),
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-
                   const SizedBox(height: 4),
-
                   Text(
                     user.email,
-                    style: TextStyle(
-                      color: colors.text2,
+                    style: const TextStyle(
+                      color: Color(0xFF8B92B8),
                       fontSize: 13,
                     ),
                   ),
@@ -276,7 +258,11 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        _isEditing ? _cancelEditing(user) : _startEditing(user);
+                        if (_isEditing) {
+                          _cancelEditing(user);
+                        } else {
+                          _startEditing(user);
+                        }
                       },
                       child: Text(_isEditing ? 'Cancel' : 'Edit Profile'),
                     ),
@@ -288,41 +274,28 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: colors.bg2,
+                      color: const Color(0xFF141720),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: colors.bg4),
+                      border: Border.all(color: const Color(0xFF232840)),
                     ),
                     child: _isEditing
                         ? Column(
                             children: [
                               _buildEditField(
-                                context: context,
                                 label: 'Full Name',
                                 controller: _fullNameController,
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
-                                    return 'Required';
+                                    return 'Full name is required';
                                   }
                                   return null;
                                 },
                               ),
                               _buildEditField(
-                                context: context,
                                 label: 'University',
                                 controller: _universityController,
                               ),
                               _buildEditField(
-                                context: context,
-                                label: 'Degree',
-                                controller: _degreeController,
-                              ),
-                              _buildEditField(
-                                context: context,
-                                label: 'Year',
-                                controller: _yearController,
-                              ),
-                              _buildEditField(
-                                context: context,
                                 label: 'Department',
                                 controller: _departmentController,
                               ),
@@ -330,19 +303,22 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  onPressed:
-                                      _isSaving ? null : () => _saveChanges(user),
+                                  onPressed: _isSaving
+                                      ? null
+                                      : () => _saveChanges(user),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: colors.teal,
-                                    foregroundColor: colors.black,
+                                    backgroundColor: const Color(0xFF00E5B0),
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
                                   ),
                                   child: _isSaving
-                                      ? SizedBox(
-                                          height: 20,
-                                          width: 20,
+                                      ? const SizedBox(
+                                          height: 22,
+                                          width: 22,
                                           child: CircularProgressIndicator(
-                                            strokeWidth: 2.5,
-                                            color: colors.black,
+                                            strokeWidth: 2,
                                           ),
                                         )
                                       : const Text('Save Changes'),
@@ -352,80 +328,31 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
                           )
                         : Column(
                             children: [
+                              _buildProfileRow("University", user.university),
+                              const Divider(color: Color(0xFF232840)),
                               _buildProfileRow(
-                                context,
-                                "University",
-                                user.university,
-                              ),
-                              Divider(color: colors.bg4),
-                              _buildProfileRow(
-                                context,
-                                "Degree",
-                                user.degree ?? 'Not set',
-                              ),
-                              Divider(color: colors.bg4),
-                              _buildProfileRow(
-                                context,
-                                "Year",
-                                user.yearOfStudy ?? 'Not set',
-                              ),
-                              Divider(color: colors.bg4),
-                              _buildProfileRow(
-                                context,
                                 "Department",
                                 user.department ?? 'Not set',
                               ),
-                              Divider(color: colors.bg4),
-                              _buildProfileRow(
-                                context,
-                                "Role",
-                                user.role,
-                              ),
+                              const Divider(color: Color(0xFF232840)),
+                              _buildProfileRow("Role", user.role.toUpperCase()),
                             ],
                           ),
                   ),
 
                   const SizedBox(height: 16),
 
-                  Container(
+                  SizedBox(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: colors.bg2,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: colors.bg4),
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        await _authService.signOut();
+                        if (!context.mounted) return;
+                        context.go('/login');
+                      },
+                      icon: const Icon(Icons.logout),
+                      label: const Text("Logout"),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Dark Mode',
-                          style: TextStyle(
-                            color: colors.text,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Switch(
-                          value: themeNotifier.isDarkMode,
-                          onChanged: (value) {
-                            themeNotifier.toggleTheme(value);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      await _authService.signOut();
-                      if (!context.mounted) return;
-                      context.go('/login');
-                    },
-                    icon: const Icon(Icons.logout),
-                    label: const Text("Logout"),
                   ),
                 ],
               ),

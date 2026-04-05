@@ -34,9 +34,7 @@ class ModuleFilesScreen extends StatelessWidget {
           ),
         ),
         title: Text(
-          module.moduleName.isNotEmpty
-              ? module.moduleName
-              : module.moduleCode,
+          module.moduleName.isNotEmpty ? module.moduleName : module.moduleCode,
           style: GoogleFonts.syne(
             color: colors.text,
             fontWeight: FontWeight.w700,

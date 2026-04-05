@@ -46,7 +46,6 @@ class PrimaryButton extends StatelessWidget {
       ),
     );
   }
-}
 
 // outline button
 class OutlineButton2 extends StatelessWidget {

@@ -102,9 +102,7 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
 class _FlashcardTile extends StatefulWidget {
   final FlashcardItem card;
 
-  const _FlashcardTile({
-    required this.card,
-  });
+  const _FlashcardTile({required this.card});
 
   @override
   State<_FlashcardTile> createState() => _FlashcardTileState();

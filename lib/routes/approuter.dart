@@ -34,8 +34,8 @@ class AppRouter {
         },
       ),
       GoRoute(
-        path: '/lecturer-home',
-        builder: (_, _) => const LecturerHomeScreen(),
+        path: '/Lecturer/Dashboard',
+        builder: (_, _) => const LecturerDashboard(),
       ),
     ],
   );
