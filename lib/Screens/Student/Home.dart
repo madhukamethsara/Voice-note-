@@ -404,10 +404,7 @@ class _ScheduleTile extends StatelessWidget {
                   subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colors.text2,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Home.subText, fontSize: 12),
                 ),
               ],
             ),
