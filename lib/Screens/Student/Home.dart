@@ -76,20 +76,17 @@ class _HomeState extends State<Home> {
   void _openExamFocus() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ExamFocusScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ExamFocusScreen()),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
     final String displayName = _isLoading
         ? '...'
         : (_appUser?.fullName.isNotEmpty == true
-            ? _appUser!.fullName
-            : 'Student');
+              ? _appUser!.fullName
+              : 'Student');
 
     return Container(
       color: Home.bg,
@@ -388,9 +385,7 @@ class _ScheduleTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: Home.card,
               borderRadius: BorderRadius.circular(12),
-              border: Border(
-                left: BorderSide(color: lineColor, width: 4),
-              ),
+              border: Border(left: BorderSide(color: lineColor, width: 4)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -410,10 +405,7 @@ class _ScheduleTile extends StatelessWidget {
                   subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Home.subText,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Home.subText, fontSize: 12),
                 ),
               ],
             ),

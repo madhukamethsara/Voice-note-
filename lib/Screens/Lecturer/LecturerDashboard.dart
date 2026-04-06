@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'LecturerHome.dart';
 import 'LecturerProfile.dart';
-import 'LecturerTimetable.dart';
+//import 'LecturerTimetable.dart';
 //import 'LecturerRecordScreen.dart';
 //import 'LecturerNotes.dart';
 
@@ -17,7 +17,7 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
 
   final List<Widget> _pages = const [
     LecturerHome(),
-    LecturerTimetableScreen(),
+    //LecturerTimetableScreen(),
     //LecturerRecordScreen(),
     //LecturerNotes(),
     LecturerProfileScreen(),
