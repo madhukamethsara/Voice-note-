@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../Models/Recording.dart';
+import '../../Models/Recording.dart';
 
 class RecordingStorageService {
   static const String _key = 'saved_recordings';
