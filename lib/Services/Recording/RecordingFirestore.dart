@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../Models/Recording.dart';
+import '../../Models/Recording.dart';
 
 class RecordingFirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
