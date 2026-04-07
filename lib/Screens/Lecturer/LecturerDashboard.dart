@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../Theme/theme_helper.dart';
+
+// Screens
 import 'LecturerHome.dart';
+import 'LecturerModulesScreen.dart';
+import 'LecturerRecordScreen.dart';
+import 'LecturerFilesScreen.dart';
 import 'LecturerProfile.dart';
-//import 'LecturerTimetable.dart';
-//import 'LecturerRecordScreen.dart';
-//import 'LecturerNotes.dart';
 
 class LecturerDashboard extends StatefulWidget {
   const LecturerDashboard({super.key});
@@ -17,50 +20,68 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
 
   final List<Widget> _pages = const [
     LecturerHome(),
-    //LecturerTimetableScreen(),
-    //LecturerRecordScreen(),
-    //LecturerNotes(),
+    LecturerModulesScreen(),
+    LecturerRecordScreen(),
+    LecturerFilesScreen(),
     LecturerProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0F14),
+      backgroundColor: colors.bg,
       body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        backgroundColor: const Color(0xFF141720),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF00E5B0),
-        unselectedItemColor: const Color(0xFF8B92B8),
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_rounded),
-            label: "Home",
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: colors.bg2,
+          border: Border(
+            top: BorderSide(
+              color: theme.dividerColor.withOpacity(0.15),
+              width: 1,
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month_rounded),
-            label: "Timetable",
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          backgroundColor: colors.bg2,
+          type: BottomNavigationBarType.fixed,
+          elevation: 0,
+          selectedItemColor: theme.colorScheme.primary,
+          unselectedItemColor: theme.textTheme.bodySmall?.color?.withOpacity(
+            0.65,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.mic_rounded),
-            label: "Record",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.note_alt_rounded),
-            label: "Notes",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_rounded),
-            label: "Profile",
-          ),
-        ],
+          showUnselectedLabels: true,
+          selectedFontSize: 12,
+          unselectedFontSize: 11,
+          onTap: (index) {
+            setState(() => _currentIndex = index);
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_rounded),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.menu_book_rounded),
+              label: 'Modules',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.mic_rounded),
+              label: 'Record',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.folder_rounded),
+              label: 'Resources',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_rounded),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -18,6 +18,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final OnboardingService _onboardingService = OnboardingService();
 
   int _currentIndex = 0;
+  bool _isFinishing = false;
 
   final List<OnboardingItem> _items = const [
     OnboardingItem(
@@ -53,18 +54,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
 
   Future<void> _finishOnboarding() async {
-    await _onboardingService.setOnboardingSeen();
+    if (_isFinishing) return;
 
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (!mounted) return;
-
-    if (user == null) {
-      context.go('/Login');
-      return;
-    }
+    setState(() {
+      _isFinishing = true;
+    });
 
     try {
+      await _onboardingService.setOnboardingSeen();
+
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (!mounted) return;
+
+      if (user == null) {
+        context.go('/Login');
+        return;
+      }
+
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -80,13 +87,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (role == 'student') {
         context.go('/dashboard');
       } else if (role == 'lecturer') {
-        context.go('/lecturer-home');
+        context.go('/lecture');
       } else {
         context.go('/Login');
       }
     } catch (e) {
       if (!mounted) return;
       context.go('/Login');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isFinishing = false;
+        });
+      }
     }
   }
 
@@ -185,7 +198,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: _finishOnboarding,
+                  onPressed: _isFinishing ? null : _finishOnboarding,
                   child: Text(
                     "Skip",
                     style: TextStyle(
@@ -272,7 +285,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _nextPage,
+                  onPressed: _isFinishing ? null : _nextPage,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colors.teal,
                     foregroundColor: colors.black,
@@ -282,7 +295,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                   child: Text(
-                    _currentIndex == _items.length - 1 ? "Get Started" : "Next",
+                    _isFinishing
+                        ? "Please wait..."
+                        : _currentIndex == _items.length - 1
+                            ? "Get Started"
+                            : "Next",
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,

@@ -520,7 +520,10 @@ class _LecturerRecordScreenState extends State<LecturerRecordScreen>
         backgroundColor: colors.bg2,
         content: Text(
           message,
-          style: GoogleFonts.dmSans(color: colors.text, fontSize: 13),
+          style: GoogleFonts.dmSans(
+            color: colors.text,
+            fontSize: 13,
+          ),
         ),
       ),
     );
@@ -588,9 +591,8 @@ class _LecturerRecordScreenState extends State<LecturerRecordScreen>
       animation: _pulseController,
       builder: (context, child) {
         final spread = isRecording ? 16 * _pulseController.value : 0.0;
-        final opacity = isRecording
-            ? (0.4 * (1 - _pulseController.value))
-            : 0.0;
+        final opacity =
+            isRecording ? (0.4 * (1 - _pulseController.value)) : 0.0;
 
         return Container(
           decoration: BoxDecoration(
@@ -621,7 +623,10 @@ class _LecturerRecordScreenState extends State<LecturerRecordScreen>
                 ),
               ),
               child: const Center(
-                child: Text('🎙️', style: TextStyle(fontSize: 32)),
+                child: Text(
+                  '🎙️',
+                  style: TextStyle(fontSize: 32),
+                ),
               ),
             ),
           ),
@@ -769,7 +774,10 @@ class _LecturerRecordScreenState extends State<LecturerRecordScreen>
           const SizedBox(height: 8),
           Text(
             recordedFilePath!,
-            style: GoogleFonts.dmSans(color: colors.text3, fontSize: 10),
+            style: GoogleFonts.dmSans(
+              color: colors.text3,
+              fontSize: 10,
+            ),
           ),
         ],
         const SizedBox(height: 10),
@@ -936,7 +944,10 @@ class _LecturerRecordScreenState extends State<LecturerRecordScreen>
                         ),
                       );
                     },
-                    icon: Icon(Icons.menu_book_rounded, color: colors.text2),
+                    icon: Icon(
+                      Icons.menu_book_rounded,
+                      color: colors.text2,
+                    ),
                   ),
                 ],
               ),

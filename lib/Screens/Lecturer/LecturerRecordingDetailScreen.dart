@@ -13,7 +13,10 @@ import '../../Theme/theme_helper.dart';
 class LecturerRecordingDetailScreen extends StatefulWidget {
   final RecordingItem recording;
 
-  const LecturerRecordingDetailScreen({super.key, required this.recording});
+  const LecturerRecordingDetailScreen({
+    super.key,
+    required this.recording,
+  });
 
   @override
   State<LecturerRecordingDetailScreen> createState() =>
@@ -137,9 +140,8 @@ class _LecturerRecordingDetailScreenState
 
     try {
       // Fetch folders from Firestore
-      final foldersSnapshot = await _foldersRef
-          .orderBy('updatedAt', descending: true)
-          .get();
+      final foldersSnapshot =
+          await _foldersRef.orderBy('updatedAt', descending: true).get();
 
       if (!mounted) return;
 
@@ -158,7 +160,8 @@ class _LecturerRecordingDetailScreenState
       }
 
       // Show folder selection bottom sheet
-      final selectedFolder = await showModalBottomSheet<Map<String, dynamic>>(
+      final selectedFolder = await showModalBottomSheet<
+          Map<String, dynamic>>(
         context: context,
         backgroundColor: colors.bg2,
         shape: const RoundedRectangleBorder(
@@ -182,7 +185,10 @@ class _LecturerRecordingDetailScreenState
                 const SizedBox(height: 6),
                 Text(
                   'Choose where to save this recording',
-                  style: GoogleFonts.dmSans(color: colors.text2, fontSize: 12),
+                  style: GoogleFonts.dmSans(
+                    color: colors.text2,
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Expanded(
@@ -197,7 +203,10 @@ class _LecturerRecordingDetailScreenState
 
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.folder_rounded, color: colors.teal),
+                        leading: Icon(
+                          Icons.folder_rounded,
+                          color: colors.teal,
+                        ),
                         title: Text(
                           folderName,
                           style: GoogleFonts.dmSans(
@@ -217,10 +226,13 @@ class _LecturerRecordingDetailScreenState
                                 ),
                               )
                             : null,
-                        onTap: () => Navigator.pop(context, {
-                          'id': folderId,
-                          'name': folderName,
-                        }),
+                        onTap: () => Navigator.pop(
+                          context,
+                          {
+                            'id': folderId,
+                            'name': folderName,
+                          },
+                        ),
                       );
                     },
                   ),
@@ -256,7 +268,10 @@ class _LecturerRecordingDetailScreenState
             ),
             content: TextField(
               controller: titleCtrl,
-              style: GoogleFonts.dmSans(color: colors.text, fontSize: 14),
+              style: GoogleFonts.dmSans(
+                color: colors.text,
+                fontSize: 14,
+              ),
               decoration: InputDecoration(
                 hintText: 'Enter file title',
                 hintStyle: GoogleFonts.dmSans(
@@ -313,7 +328,8 @@ class _LecturerRecordingDetailScreenState
           ? 'Recording ${_formatDateTime(widget.recording.createdAt)}'
           : titleCtrl.text.trim();
 
-      final itemsRef = _foldersRef.doc(folderId).collection('items');
+      final itemsRef =
+          _foldersRef.doc(folderId).collection('items');
 
       await itemsRef.add({
         'id': widget.recording.id,
@@ -404,7 +420,9 @@ class _LecturerRecordingDetailScreenState
     );
   }
 
-  Widget _buildSectionCard({required Widget child}) {
+  Widget _buildSectionCard({
+    required Widget child,
+  }) {
     final colors = context.colors;
 
     return Container(
@@ -563,8 +581,8 @@ class _LecturerRecordingDetailScreenState
                             child: Icon(
                               fileExists
                                   ? (_isPlaying
-                                        ? Icons.pause_rounded
-                                        : Icons.play_arrow_rounded)
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded)
                                   : Icons.error_outline_rounded,
                               color: fileExists ? colors.teal : colors.text2,
                               size: 42,
@@ -682,8 +700,8 @@ class _LecturerRecordingDetailScreenState
                         widget.recording.isTranscribing
                             ? 'In progress...'
                             : (widget.recording.transcript != null
-                                  ? 'Completed'
-                                  : 'Not started'),
+                                ? 'Completed'
+                                : 'Not started'),
                         colors,
                       ),
                       _detailRow(
@@ -691,8 +709,8 @@ class _LecturerRecordingDetailScreenState
                         widget.recording.isSummarizing
                             ? 'In progress...'
                             : (widget.recording.summary != null
-                                  ? 'Completed'
-                                  : 'Not started'),
+                                ? 'Completed'
+                                : 'Not started'),
                         colors,
                       ),
                     ],

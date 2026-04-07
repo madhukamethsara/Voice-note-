@@ -2,6 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
+import '../../Theme/theme_helper.dart';
+import '../../Theme/theme_notifier.dart';
 
 class LecturerProfileScreen extends StatefulWidget {
   const LecturerProfileScreen({super.key});
@@ -21,8 +25,7 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _departmentController = TextEditingController();
   final TextEditingController _universityController = TextEditingController();
-  final TextEditingController _specializationController =
-      TextEditingController();
+  final TextEditingController _specializationController = TextEditingController();
 
   User? get _currentUser => _auth.currentUser;
 
@@ -39,7 +42,8 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
 
   Future<Map<String, dynamic>> _getUserData() async {
     try {
-      final doc = await _firestore.collection('users').doc(_uid).get();
+      final doc =
+          await _firestore.collection('users').doc(_uid).get();
       return doc.data() ?? {};
     } catch (e) {
       return {};
@@ -47,8 +51,7 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
   }
 
   void _fillControllers(Map<String, dynamic> data) {
-    _fullNameController.text =
-        data['displayName'] ?? _currentUser?.displayName ?? '';
+    _fullNameController.text = data['displayName'] ?? _currentUser?.displayName ?? '';
     _departmentController.text = data['department'] ?? '';
     _universityController.text = data['university'] ?? '';
     _specializationController.text = data['specialization'] ?? '';
@@ -120,7 +123,10 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
           ),
           content: Text(
             'Are you sure you want to logout?',
-            style: GoogleFonts.dmSans(color: colors.text2, fontSize: 14),
+            style: GoogleFonts.dmSans(
+              color: colors.text2,
+              fontSize: 14,
+            ),
           ),
           actions: [
             TextButton(
@@ -171,7 +177,9 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colors.teal),
       ),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
     );
   }
 
@@ -193,7 +201,11 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
     );
   }
 
-  Widget _buildProfileRow(BuildContext context, String title, String value) {
+  Widget _buildProfileRow(
+    BuildContext context,
+    String title,
+    String value,
+  ) {
     final colors = context.colors;
 
     return Container(
@@ -209,7 +221,10 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
         children: [
           Text(
             title,
-            style: GoogleFonts.dmSans(color: colors.text2, fontSize: 13),
+            style: GoogleFonts.dmSans(
+              color: colors.text2,
+              fontSize: 13,
+            ),
           ),
           Text(
             value.isEmpty ? '-' : value,
@@ -373,7 +388,9 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
                     decoration: BoxDecoration(
                       color: colors.teal.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: colors.teal.withOpacity(0.3)),
+                      border: Border.all(
+                        color: colors.teal.withOpacity(0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -468,9 +485,8 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: colors.bg2,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     side: BorderSide(color: colors.bg4),
@@ -501,10 +517,8 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
                                               ),
                                         ),
                                       )
-                                    : Icon(
-                                        Icons.save_rounded,
-                                        color: colors.white,
-                                      ),
+                                    : Icon(Icons.save_rounded,
+                                        color: colors.white),
                                 label: Text(
                                   'Save',
                                   style: GoogleFonts.dmSans(
@@ -514,9 +528,8 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
                                 ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: colors.teal,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),

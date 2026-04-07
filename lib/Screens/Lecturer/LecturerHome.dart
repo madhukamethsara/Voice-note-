@@ -1,219 +1,505 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; 
-import 'package:voicenote/Models/AppUser.dart';
-import 'package:voicenote/Models/TimetableEntry.dart';
-import 'package:voicenote/Services/AuthService.dart';
-import 'package:voicenote/Services/TimetableService.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../Theme/theme_helper.dart';
+import 'LecturerRecordScreen.dart';
 
 class LecturerHome extends StatefulWidget {
   const LecturerHome({super.key});
-
-  static const Color bg = Color(0xFF0D0F14);
-  static const Color card = Color(0xFF141720);
-  static const Color cardBorder = Color(0xFF232840);
-  static const Color teal = Color(0xFF00E5B0);
-  static const Color amber = Color(0xFFFFC145);
-  static const Color coral = Color(0xFFFF6B6B);
-  static const Color purple = Color(0xFFA78BFA);
-  static const Color text = Color(0xFFF0F2FF);
-  static const Color subText = Color(0xFF8B92B8);
 
   @override
   State<LecturerHome> createState() => _LecturerHomeState();
 }
 
 class _LecturerHomeState extends State<LecturerHome> {
-  final AuthService _authService = AuthService();
-  final TimetableService _timetableService = TimetableService();
-
-  AppUser? _appUser;
-  List<TimetableEntry> _todaySchedule = [];
-  bool _isLoading = true;
-
-  String getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return "Good Morning 👋";
-    if (hour < 17) return "Good Afternoon ☀️";
-    if (hour < 21) return "Good Evening 🌆 ";
-    return "Good Night 🌙";
-  }
+  late final FirebaseAuth _auth;
+  late final FirebaseFirestore _firestore;
 
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
+    _auth = FirebaseAuth.instance;
+    _firestore = FirebaseFirestore.instance;
   }
 
-  Future<void> _loadInitialData() async {
+  int _foldersCount = 0;
+  int _itemsCount = 0;
+  int _recordingsCount = 0;
+
+  Future<void> _loadStats() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
     try {
-      final user = await _authService.getCurrentAppUser();
+      // Count folders
+      final foldersSnap = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('lecture_folders')
+          .get();
       
-      if (user != null) {
-        final entries = await _timetableService.getCurrentWeekEntries();
-        String todayName = DateFormat('EEEE').format(DateTime.now());
+      // Count all items across folders
+      int totalItems = 0;
+      for (var folderDoc in foldersSnap.docs) {
+        final itemsSnap = await _firestore
+            .collection('users')
+            .doc(uid)
+            .collection('lecture_folders')
+            .doc(folderDoc.id)
+            .collection('items')
+            .get();
+        totalItems += itemsSnap.docs.length;
+      }
 
-        if (!mounted) return;
-
+      if (mounted) {
         setState(() {
-          _appUser = user;
-          _todaySchedule = entries.where((e) => e.day == todayName).toList();
-          _isLoading = false;
+          _foldersCount = foldersSnap.docs.length;
+          _itemsCount = totalItems;
+          _recordingsCount = totalItems;
         });
-      } else {
-        if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      debugPrint('Error loading stats: $e');
     }
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadStats();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final String displayName = _isLoading
-        ? '...'
-        : (_appUser?.fullName.isNotEmpty == true
-              ? _appUser!.fullName
-              : 'Lecturer');
+    final colors = context.colors;
+    final theme = Theme.of(context);
+    final titleColor = theme.textTheme.bodyLarge?.color ?? Colors.white;
+    final subColor =
+        (theme.textTheme.bodyMedium?.color ?? Colors.white).withValues(alpha: 0.7);
+
+    final currentUser = _auth.currentUser;
+    final userName = currentUser?.displayName ?? 'Lecturer';
+
+    return Scaffold(
+      backgroundColor: colors.bg,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Welcome section with real user name
+              Text(
+                'Welcome back, $userName 👋',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: titleColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Here\'s your today\'s overview.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: subColor,
+                  height: 1.4,
+                ),
+              ),
+
+              const SizedBox(height: 22),
+
+              // Highlight card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: colors.bg2,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: theme.dividerColor.withValues(alpha: 0.08),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        Icons.school_rounded,
+                        color: theme.colorScheme.primary,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Today\'s Teaching Workspace',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: titleColor,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Manage your lectures and resources from one place.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: subColor,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 22),
+
+              // Stats row with real data
+              Row(
+                children: [
+                  Expanded(
+                    child: _statCard(
+                      context,
+                      icon: Icons.folder_rounded,
+                      value: _foldersCount.toString(),
+                      label: 'Folders',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _statCard(
+                      context,
+                      icon: Icons.description_rounded,
+                      value: _itemsCount.toString(),
+                      label: 'Items',
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _statCard(
+                      context,
+                      icon: Icons.graphic_eq_rounded,
+                      value: _recordingsCount.toString(),
+                      label: 'Recordings',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _statCard(
+                      context,
+                      icon: Icons.assessment_rounded,
+                      value: '0',
+                      label: 'Pending',
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Quick actions title
+              Text(
+                'Quick Actions',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: titleColor,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Access your everyday tools.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: subColor,
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // Action cards
+              GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _actionCard(
+                    context,
+                    icon: Icons.mic_rounded,
+                    title: 'Start Recording',
+                    subtitle: 'Record a lecture session.',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LecturerRecordScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _actionCard(
+                    context,
+                    icon: Icons.folder_open_rounded,
+                    title: 'My Folders',
+                    subtitle: 'View all folders.',
+                    onTap: () {},
+                  ),
+                  _actionCard(
+                    context,
+                    icon: Icons.refresh_rounded,
+                    title: 'Refresh Stats',
+                    subtitle: 'Update statistics.',
+                    onTap: () {
+                      _loadStats();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Stats refreshed'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                  _actionCard(
+                    context,
+                    icon: Icons.settings_rounded,
+                    title: 'Settings',
+                    subtitle: 'Manage preferences.',
+                    onTap: () {},
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Recent activity title
+              Text(
+                'Summary Stats',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: titleColor,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Your lecture management overview.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: subColor,
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              _statsInfoTile(
+                context,
+                icon: Icons.folder_rounded,
+                title: 'Total Folders',
+                value: '$_foldersCount',
+              ),
+              const SizedBox(height: 10),
+              _statsInfoTile(
+                context,
+                icon: Icons.description_rounded,
+                title: 'Total Items',
+                value: '$_itemsCount',
+              ),
+              const SizedBox(height: 10),
+              _statsInfoTile(
+                context,
+                icon: Icons.graphic_eq_rounded,
+                title: 'Recordings',
+                value: '$_recordingsCount',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statCard(
+    BuildContext context, {
+    required IconData icon,
+    required String value,
+    required String label,
+  }) {
+    final colors = context.colors;
+    final theme = Theme.of(context);
+    final titleColor = theme.textTheme.bodyLarge?.color ?? Colors.white;
+    final subColor =
+        (theme.textTheme.bodyMedium?.color ?? Colors.white).withValues(alpha: 0.7);
 
     return Container(
-      color: LecturerHome.bg,
-      child: SingleChildScrollView(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.bg2,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.dividerColor.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            color: theme.colorScheme.primary,
+            size: 22,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: titleColor,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: subColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final colors = context.colors;
+    final theme = Theme.of(context);
+    final titleColor = theme.textTheme.bodyLarge?.color ?? Colors.white;
+    final subColor =
+        (theme.textTheme.bodyMedium?.color ?? Colors.white).withValues(alpha: 0.7);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
         padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colors.bg2,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: theme.dividerColor.withValues(alpha: 0.08),
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 25),
-            Text(getGreeting(), style: const TextStyle(color: LecturerHome.subText, fontSize: 13)),
-            const SizedBox(height: 4),
-            RichText(
-              text: TextSpan(
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: LecturerHome.text),
-                children: [
-                  const TextSpan(text: "Hey, "),
-                  TextSpan(text: displayName, style: const TextStyle(color: LecturerHome.teal)),
-                ],
+            Icon(
+              icon,
+              color: theme.colorScheme.primary,
+              size: 24,
+            ),
+            const Spacer(),
+            Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: titleColor,
               ),
             ),
-            const SizedBox(height: 24),
-            const Text(
-              "TODAY'S SCHEDULE",
-              style: TextStyle(color: LecturerHome.subText, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: subColor,
+                height: 1.35,
+              ),
             ),
-            const SizedBox(height: 10),
-
-            if (_isLoading)
-              const Center(child: CircularProgressIndicator(color: LecturerHome.teal))
-            else if (_todaySchedule.isEmpty)
-              _buildEmptyScheduleNotice()
-            else
-              ..._todaySchedule.map((entry) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _ScheduleTile(
-                      time: entry.startTime.length >= 5 
-                          ? entry.startTime.substring(0, 5) 
-                          : entry.startTime,
-                      title: entry.moduleCode == "SPECIAL" ? entry.rawText : entry.moduleCode,
-                      subtitle: "Week ${entry.week} · ${entry.rawText}",
-                      lineColor: LecturerHome.teal,
-                    ),
-                  )),
-
-            const SizedBox(height: 24),
-            const Text(
-              "QUICK ACTIONS",
-              style: TextStyle(color: LecturerHome.subText, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1),
-            ),
-            const SizedBox(height: 10),
-            GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.4,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: const [
-                _ActionCard(icon: Icons.mic_rounded, title: "Record", description: "Capture lectures", iconColor: LecturerHome.teal),
-                _ActionCard(icon: Icons.note_alt_rounded, title: "Notes", description: "View notes", iconColor: LecturerHome.amber),
-              ],
-            ),
-            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEmptyScheduleNotice() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: LecturerHome.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: LecturerHome.cardBorder),
-      ),
-      child: const Text(
-        "No lectures scheduled for today. Upload a file or wait for the new week.",
-        style: TextStyle(color: LecturerHome.subText, fontSize: 13),
-      ),
-    );
-  }
-}
+  Widget _statsInfoTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    final colors = context.colors;
+    final theme = Theme.of(context);
+    final titleColor = theme.textTheme.bodyLarge?.color ?? Colors.white;
+    final subColor =
+        (theme.textTheme.bodyMedium?.color ?? Colors.white).withValues(alpha: 0.7);
 
-class _ScheduleTile extends StatelessWidget {
-  final String time;
-  final String title;
-  final String subtitle;
-  final Color lineColor;
-  const _ScheduleTile({required this.time, required this.title, required this.subtitle, required this.lineColor});
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(width: 52, child: Text(time, textAlign: TextAlign.right, style: const TextStyle(color: LecturerHome.subText, fontSize: 12))),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(12),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.bg2,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.dividerColor.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: LecturerHome.card,
+              color: theme.colorScheme.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
-              border: Border(left: BorderSide(color: lineColor, width: 4)),
             ),
+            child: Icon(
+              icon,
+              color: theme.colorScheme.primary,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: LecturerHome.text, fontSize: 14, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 3),
-                Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: LecturerHome.subText, fontSize: 12)),
+                Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: titleColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Count: $value',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: subColor,
+                    height: 1.35,
+                  ),
+                ),
               ],
             ),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
-  final Color iconColor;
-  const _ActionCard({required this.icon, required this.title, required this.description, required this.iconColor});
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: LecturerHome.card, borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: iconColor, size: 28),
-          const SizedBox(height: 10),
-          Text(title, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-          const SizedBox(height: 4),
-          Text(description, textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11)),
+          Text(
+            value,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: theme.colorScheme.primary,
+            ),
+          ),
         ],
       ),
     );

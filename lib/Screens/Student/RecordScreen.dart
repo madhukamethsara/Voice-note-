@@ -657,55 +657,52 @@ class _RecordScreenState extends State<RecordScreen>
   Widget _buildRecordButton(BuildContext context) {
     final colors = context.colors;
 
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (context, child) {
-        final spread = isRecording ? 16 * _pulseController.value : 0.0;
-        final opacity =
-            isRecording ? (0.4 * (1 - _pulseController.value)) : 0.0;
+  return AnimatedBuilder(
+    animation: _pulseController,
+    builder: (context, child) {
+      final spread = isRecording ? 16 * _pulseController.value : 0.0;
+      final opacity =
+          isRecording ? (0.4 * (1 - _pulseController.value)) : 0.0;
 
-        return Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: isRecording
-                ? [
-                    BoxShadow(
-                      color: colors.coral.withOpacity(opacity),
-                      spreadRadius: spread,
-                      blurRadius: 0,
-                    ),
-                  ]
-                : [],
-          ),
-          child: GestureDetector(
-            onTap: _toggleRecording,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isRecording
-                    ? colors.coral.withOpacity(0.20)
-                    : colors.teal.withOpacity(0.12),
-                border: Border.all(
-                  color: isRecording ? colors.coral : colors.teal,
-                  width: 2,
-                ),
+      return Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: isRecording
+              ? [
+                  BoxShadow(
+                    color: colors.coral.withOpacity(opacity),
+                    spreadRadius: spread,
+                    blurRadius: 0,
+                  ),
+                ]
+              : [],
+        ),
+        child: GestureDetector(
+          onTap: _toggleRecording,
+          child: Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isRecording
+                  ? colors.coral.withOpacity(0.20)
+                  : colors.teal.withOpacity(0.12),
+              border: Border.all(
+                color: isRecording ? colors.coral : colors.teal,
+                width: 2,
               ),
-              child: const Center(
-                child: Text(
-                  '🎙️',
-                  style: TextStyle(fontSize: 32),
-                ),
-              ),
-              child: const Center(
-                child: Text('🎙️', style: TextStyle(fontSize: 32)),
+            ),
+            child: const Center(
+              child: Text(
+                '🎙️',
+                style: TextStyle(fontSize: 32),
               ),
             ),
           ),
-        );
-      },
-    );
+        ),
+      );
+    },
+  );
   }
 
   Widget _buildRecorderSection(BuildContext context) {
