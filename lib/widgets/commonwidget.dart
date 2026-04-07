@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../Theme/theme_helper.dart';
+import '../theme/theme_helper.dart';
 
-// normal button
 class PrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
@@ -30,6 +29,7 @@ class PrimaryButton extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: colors.teal,
             foregroundColor: colors.black,
+            elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -46,8 +46,8 @@ class PrimaryButton extends StatelessWidget {
       ),
     );
   }
+}
 
-// outline button
 class OutlineButton2 extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
@@ -73,11 +73,6 @@ class OutlineButton2 extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
-          textStyle: GoogleFonts.syne(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: colors.text2,
-          ),
         ),
         child: Text(
           label,
@@ -92,13 +87,17 @@ class OutlineButton2 extends StatelessWidget {
   }
 }
 
-// labeled text field
 class LabeledField extends StatelessWidget {
   final String label;
   final String hint;
   final bool obscure;
   final TextInputType keyboardType;
   final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
+  final String? errorText;
+  final int maxLines;
+  final Widget? suffixIcon;
+  final bool enabled;
 
   const LabeledField({
     super.key,
@@ -107,6 +106,11 @@ class LabeledField extends StatelessWidget {
     this.obscure = false,
     this.keyboardType = TextInputType.text,
     this.controller,
+    this.onChanged,
+    this.errorText,
+    this.maxLines = 1,
+    this.suffixIcon,
+    this.enabled = true,
   });
 
   @override
@@ -129,6 +133,9 @@ class LabeledField extends StatelessWidget {
           controller: controller,
           obscureText: obscure,
           keyboardType: keyboardType,
+          onChanged: onChanged,
+          maxLines: obscure ? 1 : maxLines,
+          enabled: enabled,
           style: GoogleFonts.dmSans(
             fontSize: 13,
             color: colors.text,
@@ -139,15 +146,29 @@ class LabeledField extends StatelessWidget {
               fontSize: 13,
               color: colors.text3,
             ),
+            errorText: errorText,
+            suffixIcon: suffixIcon,
             filled: true,
             fillColor: colors.bg2,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 14,
+            ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: colors.bg4),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: colors.teal),
+              borderSide: BorderSide(color: colors.teal, width: 1.3),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: colors.coral),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: colors.coral, width: 1.3),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -159,7 +180,6 @@ class LabeledField extends StatelessWidget {
   }
 }
 
-// section labels
 class SectionLabel extends StatelessWidget {
   final String text;
 
@@ -184,7 +204,6 @@ class SectionLabel extends StatelessWidget {
   }
 }
 
-// top bar
 class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool showBack;
@@ -200,50 +219,52 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(52);
+  Size get preferredSize => const Size.fromHeight(60);
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        child: Row(
-          children: [
-            if (showBack)
-              GestureDetector(
-                onTap: onBack ?? () => Navigator.pop(context),
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: colors.bg3,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.chevron_left,
-                    color: colors.text2,
-                    size: 20,
-                  ),
+    return AppBar(
+      automaticallyImplyLeading: false,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      backgroundColor: colors.bg,
+      titleSpacing: 18,
+      title: Row(
+        children: [
+          if (showBack)
+            GestureDetector(
+              onTap: onBack ?? () => Navigator.pop(context),
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: colors.bg3,
+                  shape: BoxShape.circle,
                 ),
-              )
-            else
-              const SizedBox(width: 32),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                style: GoogleFonts.syne(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: colors.text,
+                child: Icon(
+                  Icons.chevron_left,
+                  color: colors.text2,
+                  size: 20,
                 ),
               ),
+            )
+          else
+            const SizedBox(width: 32),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              style: GoogleFonts.syne(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: colors.text,
+              ),
             ),
-            if (trailing != null) trailing!,
-          ],
-        ),
+          ),
+          if (trailing != null) trailing!,
+        ],
       ),
     );
   }

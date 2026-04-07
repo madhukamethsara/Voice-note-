@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../Models/AppUser.dart';
-import '../UserService.dart';
+import 'package:voicenote/Models/AppUser.dart';
+import 'package:voicenote/Services/userservice.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -31,6 +31,8 @@ class AuthService {
         throw Exception('User registration failed.');
       }
 
+      await user.sendEmailVerification();
+
       final appUser = AppUser(
         uid: user.uid,
         fullName: fullName.trim(),
@@ -57,7 +59,8 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final UserCredential credential = await _auth.signInWithEmailAndPassword(
+      final UserCredential credential =
+          await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password.trim(),
       );
@@ -90,6 +93,29 @@ class AuthService {
     }
 
     return await _userService.getUserByUid(user.uid);
+  }
+
+  Future<bool> isEmailVerified() async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw Exception('No signed-in user found.');
+    }
+
+    await user.reload();
+    final refreshedUser = _auth.currentUser;
+
+    return refreshedUser?.emailVerified ?? false;
+  }
+
+  Future<void> resendEmailVerification() async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw Exception('No signed-in user found.');
+    }
+
+    await user.sendEmailVerification();
   }
 
   Future<void> signOut() async {

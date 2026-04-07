@@ -8,54 +8,60 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
-import 'package:voicenote/Models/Recording.dart';
-import 'package:voicenote/Services/Recording/RecordingStorage.dart';
-import 'package:voicenote/Services/Ai/Summary.dart';
-import 'package:voicenote/Services/Ai/Transcription.dart';
-import 'package:voicenote/Screens/Student/RecordingDetailScreen.dart';
-import 'package:voicenote/Models/NoteFileItem.dart';
-import 'package:voicenote/Services/File/NoteFileStorage.dart';
-import 'package:voicenote/Services/Recording/RecordingFirestore.dart';
-import 'package:voicenote/Theme/theme_helper.dart';
+import '../../Models/Recording.dart';
+import '../../Models/NoteFileItem.dart';
+import '../../Services/Recording/RecordingStorage.dart';
+import '../../Services/Recording/RecordingFirestore.dart';
+import '../../Services/Ai/Transcription.dart';
+import '../../Services/Ai/Summary.dart';
+import '../../Services/File/NoteFileStorage.dart';
+import '../../Theme/theme_helper.dart';
+import 'LecturerRecordingDetailScreen.dart';
+import 'LecturerModulesScreen.dart';
 
-class RecordScreen extends StatefulWidget {
-  const RecordScreen({super.key});
+class LecturerRecordScreen extends StatefulWidget {
+  const LecturerRecordScreen({super.key});
 
   @override
-  State<RecordScreen> createState() => _RecordScreenState();
+  State<LecturerRecordScreen> createState() => _LecturerRecordScreenState();
 }
 
-class _RecordScreenState extends State<RecordScreen>
+class _LecturerRecordScreenState extends State<LecturerRecordScreen>
     with SingleTickerProviderStateMixin {
   final AudioRecorder _audioRecorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
+
   final RecordingStorageService _storageService = RecordingStorageService();
+  final RecordingFirestoreService _firestoreService =
+      RecordingFirestoreService();
   final TranscriptionService _transcriptionService = TranscriptionService();
   final SummaryService _summaryService = SummaryService();
   final NoteFileStorageService _noteFileStorageService =
       NoteFileStorageService();
-  final RecordingFirestoreService _firestoreService =
-      RecordingFirestoreService();
 
   late final AnimationController _pulseController;
 
   Timer? _recordTimer;
   Timer? _waveTimer;
 
-  String selectedModule = 'Data Structures';
   bool isRecording = false;
   bool showAiSection = false;
+  bool _isSendingSummary = false;
+
   int seconds = 0;
   String? recordedFilePath;
+  String? _latestRecordingId;
+  String? _playingPath;
+
   String _latestTranscript = 'Transcript will come in the next step.';
   String _summaryText = 'Summary will come after transcription.';
-  String? _latestRecordingId;
 
   List<RecordingItem> _recentRecordings = [];
-  String? _playingPath;
 
   final Random _random = Random();
   List<double> _waveHeights = [8, 16, 24, 12, 30, 18, 22, 10, 28, 14, 20, 8];
+
+  static const String _defaultModuleName = 'Lecture Recordings';
 
   @override
   void initState() {
@@ -93,6 +99,7 @@ class _RecordScreenState extends State<RecordScreen>
   Future<void> _loadRecordings() async {
     final items = await _storageService.getRecordings();
     if (!mounted) return;
+
     setState(() {
       _recentRecordings = items;
     });
@@ -110,12 +117,7 @@ class _RecordScreenState extends State<RecordScreen>
   Future<String> _createRecordingPath() async {
     final baseDir = await getApplicationDocumentsDirectory();
 
-    final safeModule = selectedModule
-        .trim()
-        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
-        .replaceAll(RegExp(r'\s+'), '_');
-
-    final moduleDir = Directory('${baseDir.path}/voice_notes/$safeModule');
+    final moduleDir = Directory('${baseDir.path}/voice_notes/lecturer');
 
     if (!await moduleDir.exists()) {
       await moduleDir.create(recursive: true);
@@ -210,36 +212,6 @@ class _RecordScreenState extends State<RecordScreen>
     }
   }
 
-  Future<void> _saveToNotes() async {
-    try {
-      final currentItem = _findRecordingById(_latestRecordingId);
-
-      if (currentItem == null) {
-        _showSnack('No recording available to save');
-        return;
-      }
-
-      final noteFile = NoteFileItem(
-        id: currentItem.id,
-        title: '${currentItem.module} Recording',
-        moduleName: currentItem.module,
-        moduleCode: '',
-        type: 'recording',
-        audioPath: currentItem.path,
-        transcript: currentItem.transcript,
-        summary: currentItem.summary,
-        createdAt: currentItem.createdAt,
-        updatedAt: DateTime.now(),
-      );
-
-      await _noteFileStorageService.saveFile(noteFile);
-
-      _showSnack('Saved to Notes ✅');
-    } catch (e) {
-      _showSnack('Save failed: $e');
-    }
-  }
-
   Future<void> _stopRecording() async {
     try {
       final path = await _audioRecorder.stop();
@@ -256,7 +228,7 @@ class _RecordScreenState extends State<RecordScreen>
         if (await file.exists()) {
           savedItem = RecordingItem(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
-            module: selectedModule,
+            module: _defaultModuleName,
             path: path,
             durationSeconds: seconds,
             createdAt: DateTime.now(),
@@ -341,6 +313,108 @@ class _RecordScreenState extends State<RecordScreen>
     }
   }
 
+  Future<void> _generateSummary() async {
+    if (_isSendingSummary) return;
+
+    try {
+      final currentItem = _findRecordingById(_latestRecordingId);
+
+      if (currentItem == null) {
+        _showSnack('No recording selected for summary');
+        return;
+      }
+
+      final transcript = currentItem.transcript?.trim() ?? '';
+
+      if (transcript.isEmpty ||
+          transcript == 'Transcribing...' ||
+          transcript.contains('failed')) {
+        _showSnack('No valid transcript available');
+        return;
+      }
+
+      setState(() {
+        _isSendingSummary = true;
+        _summaryText = 'Generating summary...';
+      });
+
+      final loadingItem = currentItem.copyWith(isSummarizing: true);
+      await _storageService.updateRecording(loadingItem);
+      await _firestoreService.updateRecording(loadingItem);
+      await _loadRecordings();
+
+      final summary = await _summaryService.summarizeText(transcript);
+
+      final updatedItem = loadingItem.copyWith(
+        summary: summary.trim().isEmpty ? 'No summary generated.' : summary,
+        isSummarizing: false,
+      );
+
+      await _storageService.updateRecording(updatedItem);
+      await _firestoreService.updateRecording(updatedItem);
+      await _loadRecordings();
+
+      if (!mounted) return;
+
+      setState(() {
+        _summaryText = updatedItem.summary ?? 'No summary generated.';
+      });
+
+      _showSnack('Summary ready');
+    } catch (e) {
+      final currentItem = _findRecordingById(_latestRecordingId);
+      if (currentItem != null) {
+        final failedItem = currentItem.copyWith(isSummarizing: false);
+        await _storageService.updateRecording(failedItem);
+        await _loadRecordings();
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _summaryText = 'Summary failed: $e';
+      });
+
+      _showSnack('Summary failed');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSendingSummary = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _saveToNotes() async {
+    try {
+      final currentItem = _findRecordingById(_latestRecordingId);
+
+      if (currentItem == null) {
+        _showSnack('No recording available to save');
+        return;
+      }
+
+      final noteFile = NoteFileItem(
+        id: currentItem.id,
+        title: 'Lecture Recording',
+        moduleName: currentItem.module,
+        moduleCode: '',
+        type: 'recording',
+        audioPath: currentItem.path,
+        transcript: currentItem.transcript,
+        summary: currentItem.summary,
+        createdAt: currentItem.createdAt,
+        updatedAt: DateTime.now(),
+      );
+
+      await _noteFileStorageService.saveFile(noteFile);
+
+      _showSnack('Saved to Notes');
+    } catch (e) {
+      _showSnack('Save failed: $e');
+    }
+  }
+
   Future<void> _toggleRecording() async {
     if (isRecording) {
       await _stopRecording();
@@ -411,73 +485,12 @@ class _RecordScreenState extends State<RecordScreen>
     }
   }
 
-  Future<void> _generateSummary() async {
-    try {
-      final currentItem = _findRecordingById(_latestRecordingId);
-
-      if (currentItem == null) {
-        _showSnack('No recording selected for summary');
-        return;
-      }
-
-      final transcript = currentItem.transcript?.trim() ?? '';
-
-      if (transcript.isEmpty ||
-          transcript == 'Transcribing...' ||
-          transcript.contains('failed')) {
-        _showSnack('No valid transcript available');
-        return;
-      }
-
-      setState(() {
-        _summaryText = 'Generating summary...';
-      });
-
-      final loadingItem = currentItem.copyWith(isSummarizing: true);
-      await _storageService.updateRecording(loadingItem);
-      await _firestoreService.updateRecording(loadingItem);
-      await _loadRecordings();
-
-      final summary = await _summaryService.summarizeText(transcript);
-
-      final updatedItem = loadingItem.copyWith(
-        summary: summary.trim().isEmpty ? 'No summary generated.' : summary,
-        isSummarizing: false,
-      );
-
-      await _storageService.updateRecording(updatedItem);
-      await _firestoreService.updateRecording(updatedItem);
-      await _loadRecordings();
-
-      if (!mounted) return;
-
-      setState(() {
-        _summaryText = updatedItem.summary ?? 'No summary generated.';
-      });
-
-      _showSnack('Summary ready');
-    } catch (e) {
-      final currentItem = _findRecordingById(_latestRecordingId);
-      if (currentItem != null) {
-        final failedItem = currentItem.copyWith(isSummarizing: false);
-        await _storageService.updateRecording(failedItem);
-        await _loadRecordings();
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        _summaryText = 'Summary failed: $e';
-      });
-
-      _showSnack('Summary failed');
-    }
-  }
-
   Future<void> _openRecordingDetails(RecordingItem item) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => RecordingDetailScreen(recording: item)),
+      MaterialPageRoute(
+        builder: (_) => LecturerRecordingDetailScreen(recording: item),
+      ),
     );
 
     await _loadRecordings();
@@ -507,7 +520,10 @@ class _RecordScreenState extends State<RecordScreen>
         backgroundColor: colors.bg2,
         content: Text(
           message,
-          style: GoogleFonts.dmSans(color: colors.text, fontSize: 13),
+          style: GoogleFonts.dmSans(
+            color: colors.text,
+            fontSize: 13,
+          ),
         ),
       ),
     );
@@ -546,92 +562,6 @@ class _RecordScreenState extends State<RecordScreen>
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  Widget _buildTopBar(BuildContext context) {
-    final colors = context.colors;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: colors.bg3,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              splashRadius: 18,
-              onPressed: () => Navigator.pop(context),
-              icon: Icon(Icons.chevron_left, color: colors.text2, size: 18),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Voice Recorder',
-              style: GoogleFonts.syne(
-                color: colors.text,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLabel(BuildContext context, String label) {
-    final colors = context.colors;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        label,
-        style: GoogleFonts.dmSans(
-          color: colors.text2,
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModulePill(BuildContext context, String title) {
-    final colors = context.colors;
-    final active = selectedModule == title;
-
-    return GestureDetector(
-      onTap: () {
-        if (isRecording) return;
-        setState(() {
-          selectedModule = title;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? colors.teal.withOpacity(0.12) : colors.bg2,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: active ? colors.teal : colors.bg3,
-            width: 1.5,
-          ),
-        ),
-        child: Text(
-          title,
-          style: GoogleFonts.dmSans(
-            color: active ? colors.teal : colors.text2,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildWaveform(BuildContext context) {
     final colors = context.colors;
 
@@ -657,59 +587,65 @@ class _RecordScreenState extends State<RecordScreen>
   Widget _buildRecordButton(BuildContext context) {
     final colors = context.colors;
 
-  return AnimatedBuilder(
-    animation: _pulseController,
-    builder: (context, child) {
-      final spread = isRecording ? 16 * _pulseController.value : 0.0;
-      final opacity =
-          isRecording ? (0.4 * (1 - _pulseController.value)) : 0.0;
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        final spread = isRecording ? 16 * _pulseController.value : 0.0;
+        final opacity =
+            isRecording ? (0.4 * (1 - _pulseController.value)) : 0.0;
 
-      return Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: isRecording
-              ? [
-                  BoxShadow(
-                    color: colors.coral.withOpacity(opacity),
-                    spreadRadius: spread,
-                    blurRadius: 0,
-                  ),
-                ]
-              : [],
-        ),
-        child: GestureDetector(
-          onTap: _toggleRecording,
-          child: Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isRecording
-                  ? colors.coral.withOpacity(0.20)
-                  : colors.teal.withOpacity(0.12),
-              border: Border.all(
-                color: isRecording ? colors.coral : colors.teal,
-                width: 2,
+        return Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: isRecording
+                ? [
+                    BoxShadow(
+                      color: colors.coral.withOpacity(opacity),
+                      spreadRadius: spread,
+                      blurRadius: 0,
+                    ),
+                  ]
+                : [],
+          ),
+          child: GestureDetector(
+            onTap: _toggleRecording,
+            child: Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isRecording
+                    ? colors.coral.withOpacity(0.20)
+                    : colors.teal.withOpacity(0.12),
+                border: Border.all(
+                  color: isRecording ? colors.coral : colors.teal,
+                  width: 2,
+                ),
               ),
-            ),
-            child: const Center(
-              child: Text(
-                '🎙️',
-                style: TextStyle(fontSize: 32),
+              child: const Center(
+                child: Text(
+                  '🎙️',
+                  style: TextStyle(fontSize: 32),
+                ),
               ),
             ),
           ),
-        ),
-      );
-    },
-  );
+        );
+      },
+    );
   }
 
   Widget _buildRecorderSection(BuildContext context) {
     final colors = context.colors;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colors.bg2,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: colors.bg4),
+      ),
       child: Column(
         children: [
           _buildWaveform(context),
@@ -727,7 +663,7 @@ class _RecordScreenState extends State<RecordScreen>
           _buildRecordButton(context),
           const SizedBox(height: 14),
           Text(
-            isRecording ? 'Recording...' : 'Tap to start recording',
+            isRecording ? 'Recording lecture...' : 'Tap to start recording',
             style: GoogleFonts.dmSans(
               color: isRecording ? colors.coral : colors.text2,
               fontSize: 13,
@@ -743,17 +679,14 @@ class _RecordScreenState extends State<RecordScreen>
     final colors = context.colors;
 
     return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 8),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          title.toUpperCase(),
-          style: GoogleFonts.dmSans(
-            color: colors.text3,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.0,
-          ),
+      padding: const EdgeInsets.only(top: 18, bottom: 8),
+      child: Text(
+        title.toUpperCase(),
+        style: GoogleFonts.dmSans(
+          color: colors.text3,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0,
         ),
       ),
     );
@@ -761,11 +694,10 @@ class _RecordScreenState extends State<RecordScreen>
 
   Widget _buildTranscriptBox(
     BuildContext context, {
-    required String textValue,
+    required String value,
     Color? textColor,
   }) {
     final colors = context.colors;
-    final effectiveTextColor = textColor ?? colors.text2;
 
     return Container(
       width: double.infinity,
@@ -773,13 +705,13 @@ class _RecordScreenState extends State<RecordScreen>
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: colors.bg3,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: colors.bg4),
       ),
       child: Text(
-        textValue,
+        value,
         style: GoogleFonts.dmSans(
-          color: effectiveTextColor,
+          color: textColor ?? colors.text2,
           fontSize: 12,
           height: 1.6,
         ),
@@ -789,7 +721,7 @@ class _RecordScreenState extends State<RecordScreen>
 
   Widget _buildSmallButton(
     BuildContext context, {
-    required String textValue,
+    required String label,
     required bool primary,
     required VoidCallback onTap,
   }) {
@@ -800,20 +732,19 @@ class _RecordScreenState extends State<RecordScreen>
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: primary ? 16 : 18,
-          vertical: 8,
+          vertical: 9,
         ),
         decoration: BoxDecoration(
           color: primary ? colors.teal : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: primary ? null : Border.all(color: colors.bg4, width: 1.5),
+          borderRadius: BorderRadius.circular(10),
+          border: primary ? null : Border.all(color: colors.bg4, width: 1.4),
         ),
         child: Text(
-          textValue,
+          label,
           style: GoogleFonts.syne(
             color: primary ? colors.black : colors.text2,
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            letterSpacing: 0.2,
           ),
         ),
       ),
@@ -832,33 +763,40 @@ class _RecordScreenState extends State<RecordScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle(context, 'AI Transcript'),
-        _buildTranscriptBox(context, textValue: _latestTranscript),
+        _buildTranscriptBox(context, value: _latestTranscript),
         _buildSectionTitle(context, 'AI Summary'),
         _buildTranscriptBox(
           context,
-          textValue: _summaryText,
+          value: _summaryText,
           textColor: colors.text,
         ),
         if (recordedFilePath != null) ...[
           const SizedBox(height: 8),
           Text(
             recordedFilePath!,
-            style: GoogleFonts.dmSans(color: colors.text3, fontSize: 10),
+            style: GoogleFonts.dmSans(
+              color: colors.text3,
+              fontSize: 10,
+            ),
           ),
         ],
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Row(
           children: [
             _buildSmallButton(
               context,
-              textValue: isSummarizing ? 'Generating...' : '✨ Summarise',
+              label: isSummarizing || _isSendingSummary
+                  ? 'Generating...'
+                  : '✨ Summarise',
               primary: true,
-              onTap: isSummarizing ? () {} : _generateSummary,
+              onTap: isSummarizing || _isSendingSummary
+                  ? () {}
+                  : _generateSummary,
             ),
             const SizedBox(width: 8),
             _buildSmallButton(
               context,
-              textValue: 'Save to Notes',
+              label: 'Save to Notes',
               primary: false,
               onTap: _saveToNotes,
             ),
@@ -868,35 +806,30 @@ class _RecordScreenState extends State<RecordScreen>
     );
   }
 
-  Widget _buildRecentRecordingCard(BuildContext context, RecordingItem item) {
+  Widget _buildRecordingTile(BuildContext context, RecordingItem item) {
     final colors = context.colors;
     final isPlaying = _playingPath == item.path;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       onTap: () => _openRecordingDetails(item),
       child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: colors.bg2,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colors.bg3),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.bg4),
         ),
         child: Row(
           children: [
             GestureDetector(
               onTap: () => _togglePlayback(item),
               child: Container(
-                width: 36,
-                height: 36,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: (item.module == 'Software Eng.'
-                          ? colors.amber
-                          : colors.teal)
-                      .withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(8),
+                  color: colors.teal.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
                   child: Text(
@@ -906,7 +839,7 @@ class _RecordScreenState extends State<RecordScreen>
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -916,16 +849,15 @@ class _RecordScreenState extends State<RecordScreen>
                     style: GoogleFonts.syne(
                       color: colors.text,
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     '${_formatDurationLabel(item.durationSeconds)} · ${_formatDayLabel(item.createdAt)}',
                     style: GoogleFonts.dmSans(
                       color: colors.text2,
                       fontSize: 12,
-                      height: 1.5,
                     ),
                   ),
                   if (item.isTranscribing) ...[
@@ -935,7 +867,7 @@ class _RecordScreenState extends State<RecordScreen>
                       style: GoogleFonts.dmSans(
                         color: colors.amber,
                         fontSize: 11,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ] else if (item.isSummarizing) ...[
@@ -945,7 +877,7 @@ class _RecordScreenState extends State<RecordScreen>
                       style: GoogleFonts.dmSans(
                         color: colors.teal,
                         fontSize: 11,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ] else if (item.summary != null &&
@@ -961,19 +893,6 @@ class _RecordScreenState extends State<RecordScreen>
                         height: 1.4,
                       ),
                     ),
-                  ] else if (item.transcript != null &&
-                      item.transcript!.trim().isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      item.transcript!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.dmSans(
-                        color: colors.text2,
-                        fontSize: 11,
-                        height: 1.4,
-                      ),
-                    ),
                   ],
                 ],
               ),
@@ -981,42 +900,14 @@ class _RecordScreenState extends State<RecordScreen>
             IconButton(
               onPressed: () => _deleteRecording(item),
               icon: Icon(
-                Icons.delete_outline,
+                Icons.delete_outline_rounded,
                 color: colors.text2,
-                size: 18,
+                size: 20,
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildRecentRecordingsSection(BuildContext context) {
-    final colors = context.colors;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle(context, 'Recent recordings'),
-        if (_recentRecordings.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: colors.bg2,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: colors.bg3),
-            ),
-            child: Text(
-              'No recordings yet',
-              style: GoogleFonts.dmSans(color: colors.text2, fontSize: 12),
-            ),
-          )
-        else
-          ..._recentRecordings
-              .map((item) => _buildRecentRecordingCard(context, item)),
-      ],
     );
   }
 
@@ -1027,33 +918,78 @@ class _RecordScreenState extends State<RecordScreen>
     return Scaffold(
       backgroundColor: colors.bg,
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildTopBar(context),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildLabel(context, 'Save to module'),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        _buildModulePill(context, 'Data Structures'),
-                        _buildModulePill(context, 'Software Eng.'),
-                        _buildModulePill(context, 'Database'),
-                      ],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Lecture Recording',
+                      style: GoogleFonts.syne(
+                        color: colors.text,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                    _buildRecorderSection(context),
-                    _buildAiSection(context),
-                    _buildRecentRecordingsSection(context),
-                  ],
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LecturerModulesScreen(),
+                        ),
+                      );
+                    },
+                    icon: Icon(
+                      Icons.menu_book_rounded,
+                      color: colors.text2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Record lectures, generate transcript, and create summary.',
+                style: GoogleFonts.dmSans(
+                  color: colors.text2,
+                  fontSize: 13,
+                  height: 1.4,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 18),
+              _buildRecorderSection(context),
+              _buildAiSection(context),
+              _buildSectionTitle(context, 'Recent Recordings'),
+              if (_recentRecordings.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: colors.bg2,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: colors.bg4),
+                  ),
+                  child: Text(
+                    'No recordings yet.',
+                    style: GoogleFonts.dmSans(
+                      color: colors.text2,
+                      fontSize: 13,
+                    ),
+                  ),
+                )
+              else
+                ..._recentRecordings.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _buildRecordingTile(context, item),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

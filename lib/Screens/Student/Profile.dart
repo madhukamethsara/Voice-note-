@@ -116,7 +116,6 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 
@@ -422,7 +421,7 @@ class _StudentProfileScreenState extends State<ProfileScreen> {
                     onPressed: () async {
                       await _authService.signOut();
                       if (!context.mounted) return;
-                      context.go('/login');
+                      context.go('/');
                     },
                     icon: const Icon(Icons.logout),
                     label: const Text("Logout"),

@@ -27,13 +27,8 @@ class _NotesState extends State<Notes> {
   String _formatUpdatedText(DateTime? dateTime) {
     if (dateTime == null) return 'No updates';
 
-    final accentColors = [
-      colors.teal,
-      colors.purple,
-      colors.blue,
-      colors.amber,
-      colors.coral,
-    ];
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
 
     if (difference.inMinutes < 1) return 'Updated just now';
     if (difference.inMinutes < 60) {
@@ -43,7 +38,10 @@ class _NotesState extends State<Notes> {
       return 'Updated ${difference.inHours} hr ago';
     }
     if (difference.inDays == 1) return 'Updated yesterday';
-    if (difference.inDays < 7) return 'Updated ${difference.inDays} days ago';
+    if (difference.inDays < 7) {
+      return 'Updated ${difference.inDays} days ago';
+    }
+
     return 'Updated ${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 
@@ -234,7 +232,11 @@ class _NotesState extends State<Notes> {
                 color: colors.bg3,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(Icons.folder_rounded, color: accentColor, size: 28),
+              child: Icon(
+                Icons.folder_rounded,
+                color: accentColor,
+                size: 28,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -341,7 +343,11 @@ class _NotesState extends State<Notes> {
       ),
       child: Column(
         children: [
-          Icon(Icons.folder_off_rounded, size: 42, color: colors.text3),
+          Icon(
+            Icons.folder_off_rounded,
+            size: 42,
+            color: colors.text3,
+          ),
           const SizedBox(height: 10),
           Text(
             'No modules yet',
@@ -394,6 +400,7 @@ class _NotesState extends State<Notes> {
           const SizedBox(height: 6),
           Text(
             message,
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: colors.text2,
               fontSize: 12,

@@ -1,8 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import '../../Models/AppUser.dart';
-import '../../Services/AuthService.dart';
-import '../../Services/UserService.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
+import '../../Theme/theme_helper.dart';
+import '../../Theme/theme_notifier.dart';
 
 class LecturerProfileScreen extends StatefulWidget {
   const LecturerProfileScreen({super.key});
@@ -12,82 +15,73 @@ class LecturerProfileScreen extends StatefulWidget {
 }
 
 class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
-  final AuthService _authService = AuthService();
-  final UserService _userService = UserService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   bool _isEditing = false;
   bool _isSaving = false;
 
   final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _universityController = TextEditingController();
   final TextEditingController _departmentController = TextEditingController();
+  final TextEditingController _universityController = TextEditingController();
+  final TextEditingController _specializationController = TextEditingController();
 
-  String? _loadedUserId;
+  User? get _currentUser => _auth.currentUser;
+
+  String get _uid => _currentUser?.uid ?? '';
 
   @override
   void dispose() {
     _fullNameController.dispose();
-    _universityController.dispose();
     _departmentController.dispose();
+    _universityController.dispose();
+    _specializationController.dispose();
     super.dispose();
   }
 
-  void _fillControllers(AppUser user) {
-    if (_loadedUserId == user.uid) return;
-
-    _fullNameController.text = user.fullName;
-    _universityController.text = user.university;
-    _departmentController.text = user.department ?? '';
-    _loadedUserId = user.uid;
+  Future<Map<String, dynamic>> _getUserData() async {
+    try {
+      final doc =
+          await _firestore.collection('users').doc(_uid).get();
+      return doc.data() ?? {};
+    } catch (e) {
+      return {};
+    }
   }
 
-  void _startEditing(AppUser user) {
-    _fullNameController.text = user.fullName;
-    _universityController.text = user.university;
-    _departmentController.text = user.department ?? '';
-
-    setState(() {
-      _isEditing = true;
-    });
+  void _fillControllers(Map<String, dynamic> data) {
+    _fullNameController.text = data['displayName'] ?? _currentUser?.displayName ?? '';
+    _departmentController.text = data['department'] ?? '';
+    _universityController.text = data['university'] ?? '';
+    _specializationController.text = data['specialization'] ?? '';
   }
 
-  void _cancelEditing(AppUser user) {
-    _fullNameController.text = user.fullName;
-    _universityController.text = user.university;
-    _departmentController.text = user.department ?? '';
-
-    setState(() {
-      _isEditing = false;
-    });
-  }
-
-  Future<void> _saveChanges(AppUser user) async {
+  Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isSaving = true;
-    });
+    setState(() => _isSaving = true);
 
     try {
-      await _userService.updateUserProfile(
-        uid: user.uid,
-        fullName: _fullNameController.text.trim(),
-        university: _universityController.text.trim(),
-        department: _departmentController.text.trim(),
-        degree: '', 
-        yearOfStudy: '', 
-      );
+      await _firestore.collection('users').doc(_uid).update({
+        'displayName': _fullNameController.text.trim(),
+        'department': _departmentController.text.trim(),
+        'university': _universityController.text.trim(),
+        'specialization': _specializationController.text.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
 
       if (!mounted) return;
 
-      setState(() {
-        _isEditing = false;
-      });
+      setState(() => _isEditing = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile updated successfully'),
+        SnackBar(
+          backgroundColor: context.colors.teal,
+          content: Text(
+            'Profile updated successfully',
+            style: GoogleFonts.dmSans(color: context.colors.white),
+          ),
         ),
       );
     } catch (e) {
@@ -95,52 +89,96 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Update failed: $e'),
+          backgroundColor: context.colors.coral,
+          content: Text(
+            'Update failed: $e',
+            style: GoogleFonts.dmSans(color: context.colors.white),
+          ),
         ),
       );
     } finally {
       if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
+        setState(() => _isSaving = false);
       }
     }
   }
 
+  Future<void> _logout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final colors = context.colors;
+        return AlertDialog(
+          backgroundColor: colors.bg2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Logout',
+            style: GoogleFonts.syne(
+              color: colors.text,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to logout?',
+            style: GoogleFonts.dmSans(
+              color: colors.text2,
+              fontSize: 14,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.dmSans(
+                  color: colors.text2,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(
+                'Logout',
+                style: GoogleFonts.dmSans(
+                  color: colors.coral,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _auth.signOut();
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    }
+  }
+
   InputDecoration _inputDecoration(String label) {
+    final colors = context.colors;
+
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Color(0xFF8B92B8)),
+      labelStyle: GoogleFonts.dmSans(color: colors.text2),
+      filled: true,
+      fillColor: colors.bg,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF232840)),
+        borderSide: BorderSide(color: colors.bg4),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF00E5B0)),
+        borderSide: BorderSide(color: colors.teal),
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-      ),
-    );
-  }
-
-  Widget _buildProfileRow(String title, String value) {
-    return ListTile(
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: Color(0xFF8B92B8),
-          fontSize: 13,
-        ),
-      ),
-      trailing: Text(
-        value,
-        style: const TextStyle(
-          color: Color(0xFFF0F2FF),
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }
@@ -150,216 +188,426 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
     required TextEditingController controller,
     String? Function(String?)? validator,
   }) {
+    final colors = context.colors;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: TextFormField(
         controller: controller,
-        style: const TextStyle(color: Colors.white),
+        style: GoogleFonts.dmSans(color: colors.text),
         decoration: _inputDecoration(label),
         validator: validator,
       ),
     );
   }
 
+  Widget _buildProfileRow(
+    BuildContext context,
+    String title,
+    String value,
+  ) {
+    final colors = context.colors;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: colors.bg2,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.bg4),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.dmSans(
+              color: colors.text2,
+              fontSize: 13,
+            ),
+          ),
+          Text(
+            value.isEmpty ? '-' : value,
+            style: GoogleFonts.dmSans(
+              color: colors.text,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currentUser = _authService.currentFirebaseUser;
+    final colors = context.colors;
+    final themeNotifier = context.watch<ThemeNotifier>();
 
-    if (currentUser == null) {
-      return const Scaffold(
+    if (_currentUser == null) {
+      return Scaffold(
+        backgroundColor: colors.bg,
         body: Center(
-          child: Text('No logged-in user found'),
+          child: Text(
+            'No logged-in user found',
+            style: GoogleFonts.dmSans(color: colors.text),
+          ),
         ),
       );
     }
 
-    return StreamBuilder<AppUser?>(
-      stream: _userService.streamUserByUid(currentUser.uid),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Color(0xFF0D0F14),
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return Scaffold(
-            backgroundColor: const Color(0xFF0D0F14),
-            body: Center(
-              child: Text(
-                snapshot.error.toString(),
-                style: const TextStyle(color: Colors.redAccent),
+    return Scaffold(
+      backgroundColor: colors.bg,
+      appBar: AppBar(
+        backgroundColor: colors.bg,
+        elevation: 0,
+        centerTitle: false,
+        title: Text(
+          'Profile',
+          style: GoogleFonts.syne(
+            color: colors.text,
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        actions: [
+          // Theme Toggle
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: colors.bg2,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colors.bg4),
+              ),
+              child: IconButton(
+                onPressed: () {
+                  themeNotifier.toggleTheme(!themeNotifier.isDarkMode);
+                },
+                icon: Icon(
+                  themeNotifier.isDarkMode
+                      ? Icons.light_mode_rounded
+                      : Icons.dark_mode_rounded,
+                  color: colors.amber,
+                  size: 22,
+                ),
               ),
             ),
-          );
-        }
+          ),
+        ],
+      ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _getUserData(),
+        builder: (context, snapshot) {
+          final colors = context.colors;
+          final userData = snapshot.data ?? {};
 
-        final user = snapshot.data;
+          if (!_isEditing) {
+            _fillControllers(userData);
+          }
 
-        if (user == null) {
-          return const Scaffold(
-            backgroundColor: Color(0xFF0D0F14),
-            body: Center(
-              child: Text(
-                'User data not found',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          );
-        }
-
-        if (!_isEditing) {
-          _fillControllers(user);
-        }
-
-        return Scaffold(
-          backgroundColor: const Color(0xFF0D0F14),
-          body: SingleChildScrollView(
+          return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Form(
               key: _formKey,
               child: Column(
                 children: [
-                  const SizedBox(height: 10),
-
-                  const CircleAvatar(
-                    radius: 42,
-                    backgroundColor: Color(0xFF232840),
-                    child: Icon(
-                      Icons.person,
-                      size: 42,
-                      color: Color(0xFF00E5B0),
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  Text(
-                    user.fullName,
-                    style: const TextStyle(
-                      color: Color(0xFFF0F2FF),
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.email,
-                    style: const TextStyle(
-                      color: Color(0xFF8B92B8),
-                      fontSize: 13,
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        if (_isEditing) {
-                          _cancelEditing(user);
-                        } else {
-                          _startEditing(user);
-                        }
-                      },
-                      child: Text(_isEditing ? 'Cancel' : 'Edit Profile'),
-                    ),
-                  ),
-
                   const SizedBox(height: 8),
 
+                  // Avatar
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
+                    width: 90,
+                    height: 90,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF141720),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFF232840)),
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          colors.teal.withOpacity(0.2),
+                          colors.blue.withOpacity(0.2),
+                        ],
+                      ),
+                      border: Border.all(
+                        color: colors.teal.withOpacity(0.3),
+                        width: 2,
+                      ),
                     ),
-                    child: _isEditing
-                        ? Column(
-                            children: [
-                              _buildEditField(
-                                label: 'Full Name',
-                                controller: _fullNameController,
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Full name is required';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              _buildEditField(
-                                label: 'University',
-                                controller: _universityController,
-                              ),
-                              _buildEditField(
-                                label: 'Department',
-                                controller: _departmentController,
-                              ),
-                              const SizedBox(height: 10),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: _isSaving
-                                      ? null
-                                      : () => _saveChanges(user),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF00E5B0),
-                                    foregroundColor: Colors.black,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                  ),
-                                  child: _isSaving
-                                      ? const SizedBox(
-                                          height: 22,
-                                          width: 22,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : const Text('Save Changes'),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Column(
-                            children: [
-                              _buildProfileRow("University", user.university),
-                              const Divider(color: Color(0xFF232840)),
-                              _buildProfileRow(
-                                "Department",
-                                user.department ?? 'Not set',
-                              ),
-                              const Divider(color: Color(0xFF232840)),
-                              _buildProfileRow("Role", user.role.toUpperCase()),
-                            ],
-                          ),
+                    child: Center(
+                      child: Icon(
+                        Icons.person_rounded,
+                        size: 48,
+                        color: colors.teal,
+                      ),
+                    ),
                   ),
-
                   const SizedBox(height: 16),
 
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await _authService.signOut();
-                        if (!context.mounted) return;
-                        context.go('/login');
-                      },
-                      icon: const Icon(Icons.logout),
-                      label: const Text("Logout"),
+                  // Email (Non-editable)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.bg2,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: colors.bg4),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Email',
+                          style: GoogleFonts.dmSans(
+                            color: colors.text2,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          _currentUser?.email ?? '-',
+                          style: GoogleFonts.dmSans(
+                            color: colors.text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // Account Type Badge
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.teal.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: colors.teal.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.verified_user_rounded,
+                          size: 18,
+                          color: colors.teal,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Lecturer Account',
+                          style: GoogleFonts.dmSans(
+                            color: colors.teal,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Edit/Save Buttons
+                  if (!_isEditing)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => setState(() => _isEditing = true),
+                        icon: Icon(Icons.edit_rounded, color: colors.white),
+                        label: Text(
+                          'Edit Profile',
+                          style: GoogleFonts.syne(
+                            color: colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colors.teal,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+
+                  // Profile Information Section
+                  if (_isEditing)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Profile Information',
+                          style: GoogleFonts.syne(
+                            color: colors.text,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildEditField(
+                          label: 'Full Name',
+                          controller: _fullNameController,
+                          validator: (value) {
+                            if (value?.isEmpty ?? true) {
+                              return 'Full name is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        _buildEditField(
+                          label: 'Department',
+                          controller: _departmentController,
+                        ),
+                        _buildEditField(
+                          label: 'University',
+                          controller: _universityController,
+                        ),
+                        _buildEditField(
+                          label: 'Specialization',
+                          controller: _specializationController,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  setState(() => _isEditing = false);
+                                  _fillControllers(userData);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: colors.bg2,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: BorderSide(color: colors.bg4),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Cancel',
+                                  style: GoogleFonts.dmSans(
+                                    color: colors.text,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _isSaving ? null : _saveChanges,
+                                icon: _isSaving
+                                    ? SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                colors.white,
+                                              ),
+                                        ),
+                                      )
+                                    : Icon(Icons.save_rounded,
+                                        color: colors.white),
+                                label: Text(
+                                  'Save',
+                                  style: GoogleFonts.dmSans(
+                                    color: colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: colors.teal,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Profile Information',
+                          style: GoogleFonts.syne(
+                            color: colors.text,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildProfileRow(
+                          context,
+                          'Full Name',
+                          _fullNameController.text,
+                        ),
+                        _buildProfileRow(
+                          context,
+                          'Department',
+                          _departmentController.text,
+                        ),
+                        _buildProfileRow(
+                          context,
+                          'University',
+                          _universityController.text,
+                        ),
+                        _buildProfileRow(
+                          context,
+                          'Specialization',
+                          _specializationController.text,
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 32),
+
+                  // Logout Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _logout,
+                      icon: Icon(Icons.logout_rounded, color: colors.white),
+                      label: Text(
+                        'Logout',
+                        style: GoogleFonts.syne(
+                          color: colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colors.coral,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

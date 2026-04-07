@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:voicenote/Services/File/ModuleService.dart';
-
 import 'package:voicenote/Services/File/FileService.dart';
 import 'package:voicenote/Services/ExcelService.dart';
 import 'package:voicenote/Services/TimetableService.dart';
@@ -38,6 +37,7 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
 
   List<TimetableEntry> _firebaseEntries = [];
   List<TimetableEntry> _upcomingEntries = [];
+  List<String> _assignedModules = [];
 
   String _studentDegree = "";
   bool _isLoadingTimetable = false;
@@ -55,7 +55,6 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
   Future<void> _loadStudentDegree() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-
       if (user == null) return;
 
       final doc = await FirebaseFirestore.instance
@@ -78,12 +77,11 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
         await _loadFilteredTimetable();
       }
 
-      print("LOGGED_USER_DEGREE → $_studentDegree");
+      print("LOGGED_USER_DEGREE -> $_studentDegree");
     } catch (e) {
       if (!mounted) return;
 
       final colors = context.colors;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error loading student degree: $e"),
@@ -94,6 +92,86 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
     }
   }
 
+  Future<List<String>> _loadAssignedModules(String uid) async {
+    try {
+      final List<String> modules = [];
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data();
+
+        final assignedModulesField = data?['assignedModules'];
+        if (assignedModulesField is List) {
+          modules.addAll(
+            assignedModulesField
+                .map((e) => e.toString().trim().toUpperCase())
+                .where((e) => e.isNotEmpty),
+          );
+        }
+
+        final modulesField = data?['modules'];
+        if (modulesField is List) {
+          modules.addAll(
+            modulesField
+                .map((e) => e.toString().trim().toUpperCase())
+                .where((e) => e.isNotEmpty),
+          );
+        }
+      }
+
+      if (modules.isEmpty) {
+        final assignedSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('assignedModules')
+            .get();
+
+        if (assignedSnapshot.docs.isNotEmpty) {
+          modules.addAll(
+            assignedSnapshot.docs.map((doc) {
+              final data = doc.data();
+              return (data['moduleCode'] ?? '')
+                  .toString()
+                  .trim()
+                  .toUpperCase();
+            }).where((e) => e.isNotEmpty),
+          );
+        }
+      }
+
+      if (modules.isEmpty) {
+        final moduleSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('modules')
+            .get();
+
+        if (moduleSnapshot.docs.isNotEmpty) {
+          modules.addAll(
+            moduleSnapshot.docs.map((doc) {
+              final data = doc.data();
+              return (data['moduleCode'] ?? doc.id)
+                  .toString()
+                  .trim()
+                  .toUpperCase();
+            }).where((e) => e.isNotEmpty),
+          );
+        }
+      }
+
+      final uniqueModules = modules.toSet().toList();
+      print("ASSIGNED_MODULES_FROM_FIRESTORE -> $uniqueModules");
+      return uniqueModules;
+    } catch (e) {
+      print("Error loading assigned modules: $e");
+      return [];
+    }
+  }
+
   Future<void> _uploadTimetable() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -101,7 +179,6 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
 
       if (_studentDegree.isEmpty) {
         final colors = context.colors;
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text("Student degree not found"),
@@ -118,7 +195,6 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
 
       if (file == null) {
         final colors = context.colors;
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text("No file selected"),
@@ -133,7 +209,6 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
 
       if (bytes == null) {
         final colors = context.colors;
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text("Could not read file bytes"),
@@ -200,6 +275,43 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
     }
   }
 
+  bool _matchesAssignedModules(TimetableEntry entry, List<String> assignedModules) {
+    final moduleCode = entry.moduleCode.trim().toUpperCase();
+    final raw = entry.rawText.trim().toUpperCase();
+
+    if (moduleCode == "SPECIAL") return true;
+    if (assignedModules.contains(moduleCode)) return true;
+
+    for (final module in assignedModules) {
+      if (raw.contains(module)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  int _dayOrder(String day) {
+    switch (day.trim().toUpperCase()) {
+      case "MONDAY":
+        return 1;
+      case "TUESDAY":
+        return 2;
+      case "WEDNESDAY":
+        return 3;
+      case "THURSDAY":
+        return 4;
+      case "FRIDAY":
+        return 5;
+      case "SATURDAY":
+        return 6;
+      case "SUNDAY":
+        return 7;
+      default:
+        return 99;
+    }
+  }
+
   Future<void> _loadFilteredTimetable() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -209,18 +321,44 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
         _isLoadingTimetable = true;
       });
 
+      final assignedModules = await _loadAssignedModules(user.uid);
       final entries = await _timetableService.getCurrentWeekEntries();
       final upcoming = await _timetableService.getUpcomingEntries();
+
+      final filteredEntries = entries
+          .where((entry) => _matchesAssignedModules(entry, assignedModules))
+          .toList();
+
+      final filteredUpcoming = upcoming
+          .where((entry) => _matchesAssignedModules(entry, assignedModules))
+          .toList();
+
+      filteredUpcoming.sort((a, b) {
+        final weekCompare = a.week.compareTo(b.week);
+        if (weekCompare != 0) return weekCompare;
+
+        final dayCompare = _dayOrder(a.day).compareTo(_dayOrder(b.day));
+        if (dayCompare != 0) return dayCompare;
+
+        return a.startTime.compareTo(b.startTime);
+      });
 
       if (!mounted) return;
 
       setState(() {
-        _firebaseEntries = entries;
-        _upcomingEntries = upcoming;
+        _assignedModules = assignedModules;
+        _firebaseEntries = filteredEntries;
+        _upcomingEntries = filteredUpcoming;
         _isLoadingTimetable = false;
       });
 
-      print("FILTERED_ENTRIES_COUNT (Week $_currentWeek) → ${entries.length}");
+      print("ASSIGNED_MODULES -> $_assignedModules");
+      print(
+        "FILTERED_ENTRIES_COUNT (Week $_currentWeek) -> ${filteredEntries.length}",
+      );
+      print(
+        "FILTERED_UPCOMING_COUNT -> ${filteredUpcoming.length}",
+      );
     } catch (e) {
       if (!mounted) return;
 
@@ -229,7 +367,6 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
       });
 
       final colors = context.colors;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error loading timetable: $e"),
@@ -251,7 +388,11 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
 
     final selectedDay = dayMap[days[selectedDayIndex]] ?? "Monday";
 
-    return _firebaseEntries.where((entry) => entry.day == selectedDay).toList();
+    return _firebaseEntries.where((entry) {
+      final matchesDay = entry.day == selectedDay;
+      final matchesModules = _matchesAssignedModules(entry, _assignedModules);
+      return matchesDay && matchesModules;
+    }).toList();
   }
 
   List<Map<String, dynamic>> _buildDaySessions() {
@@ -262,7 +403,7 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
         "time": entry.startTime.length >= 5
             ? entry.startTime.substring(0, 5)
             : entry.startTime,
-        "subject": entry.moduleCode == "SPECIAL"
+        "subject": entry.moduleCode.trim().toUpperCase() == "SPECIAL"
             ? entry.rawText
             : entry.moduleCode,
         "place":
@@ -410,7 +551,7 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                         ),
               const SizedBox(height: 22),
               Text(
-                "Upcoming Exams & Deadlines",
+                "Upcoming Exams, Vivas & Deadlines",
                 style: TextStyle(
                   color: colors.text,
                   fontSize: 16,
@@ -478,6 +619,17 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
               ),
             ),
           ],
+          if (_assignedModules.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              "Your modules: ${_assignedModules.join(', ')}",
+              style: TextStyle(
+                color: colors.text2,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
@@ -494,7 +646,10 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
               ),
               child: const Text(
                 "Choose Excel File",
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -534,11 +689,16 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(14),
-                border: Border(left: BorderSide(color: color, width: 4)),
+                border: Border(
+                  left: BorderSide(color: color, width: 4),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,8 +746,11 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
           border: Border.all(color: colors.bg4),
         ),
         child: Text(
-          "No upcoming exams 🎉",
-          style: TextStyle(color: colors.text2, fontSize: 12),
+          "No upcoming exams, vivas, or deadlines 🎉",
+          style: TextStyle(
+            color: colors.text2,
+            fontSize: 12,
+          ),
         ),
       );
     }
@@ -600,7 +763,9 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
         progress = progress.clamp(0.0, 1.0);
 
         Color progressColor;
-        if (weeksLeft > 4) {
+        if (entry.rawText.toUpperCase().contains("VIVA")) {
+          progressColor = colors.purple;
+        } else if (weeksLeft > 4) {
           progressColor = colors.teal;
         } else if (weeksLeft > 2) {
           progressColor = colors.amber;
@@ -616,7 +781,9 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
             decoration: BoxDecoration(
               color: colors.bg2,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: progressColor.withOpacity(0.4)),
+              border: Border.all(
+                color: progressColor.withOpacity(0.4),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -649,7 +816,9 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  "$weeksLeft week${weeksLeft == 1 ? "" : "s"} left",
+                  weeksLeft <= 0
+                      ? "This week"
+                      : "$weeksLeft week${weeksLeft == 1 ? "" : "s"} left",
                   style: TextStyle(
                     color: progressColor,
                     fontSize: 11,
@@ -693,7 +862,9 @@ class _StudentTimetableScreenState extends State<TimetableScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            "Wait for data or check if you uploaded the correct timetable.",
+            _assignedModules.isEmpty
+                ? "No assigned modules found for this user."
+                : "Only your assigned modules are shown here.",
             textAlign: TextAlign.center,
             style: TextStyle(
               color: colors.text2,

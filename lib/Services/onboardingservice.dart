@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OnboardingService {
-  static const String _prefix = 'onboarding_seen_';
+  static const String _prefix = 'onboardingseen_';
 
   String _getKey() {
     final user = FirebaseAuth.instance.currentUser;

@@ -4,8 +4,9 @@ import '../Screens/Login.dart';
 import '../Screens/Register.dart';
 import '../Screens/Roles.dart';
 import '../Screens/SplashScreen.dart';
-import '../Screens/Lecture/lecturehome.dart';
+import 'package:voicenote/Screens/Lecturer/LecturerDashboard.dart';
 import '../Screens/OnboardingScreen.dart';
+import '../Screens/VerifyEmailScreen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -33,9 +34,10 @@ class AppRouter {
           );
         },
       ),
+      GoRoute(path: '/lecture', builder: (_, _) => const LecturerDashboard()),
       GoRoute(
-        path: '/Lecturer/Dashboard',
-        builder: (_, _) => const LecturerDashboard(),
+        path: '/verify-email',
+        builder: (_, _) => const VerifyEmailScreen(),
       ),
     ],
   );
