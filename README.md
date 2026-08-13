@@ -66,20 +66,6 @@ Each module contains:
   * Firestore Database
   * Firebase Storage
 
----
-
-## 👥 Team Responsibilities
-
-| Member           | Responsibility                      |
-| ---------------- | ----------------------------------- |
-| Madhuka Methsara | Authentication + System Integration |
-| Member 2         | Excel Import + Database Upload      |
-| Member 3         | Timetable UI + Exam Display         |
-| Member 4         | Lecture Time Logic                  |
-| Member 5         | Voice Recording + Storage           |
-| Member 6         | Module File Management + Notes      |
-
----
 
 ## 🔄 Git Workflow
 
